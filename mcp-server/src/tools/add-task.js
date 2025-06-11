@@ -51,6 +51,14 @@ export function registerAddTaskTool(server) {
 				.string()
 				.optional()
 				.describe('Task priority (high, medium, low)'),
+			assignees: z
+				.string()
+				.optional()
+				.describe('Comma-separated list of people or teams assigned to this task'),
+			executor: z
+				.string()
+				.optional()
+				.describe('Who should execute this task: "agent" or "human" (default: agent)'),
 			file: z
 				.string()
 				.optional()
@@ -92,6 +100,8 @@ export function registerAddTaskTool(server) {
 						testStrategy: args.testStrategy,
 						dependencies: args.dependencies,
 						priority: args.priority,
+						assignees: args.assignees,
+						executor: args.executor,
 						research: args.research,
 						projectRoot: args.projectRoot
 					},

@@ -35,6 +35,7 @@ const updatedTaskSchema = z
 		priority: z.string().optional(),
 		details: z.string().optional(),
 		testStrategy: z.string().optional(),
+		executor: z.enum(['agent', 'human']).optional().default('agent'),
 		subtasks: z.array(z.any()).optional() // Keep subtasks flexible for now
 	})
 	.strip(); // Allow potential extra fields during parsing if needed, then validate structure

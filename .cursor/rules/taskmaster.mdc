@@ -36,7 +36,7 @@ This document provides a detailed reference for interacting with Taskmaster, cov
     *   `addAliases`: `Add shell aliases tm and taskmaster. Default is false.` (CLI: `--aliases`)
     *   `yes`: `Skip prompts and use defaults/provided arguments. Default is false.` (CLI: `-y, --yes`)
 *   **Usage:** Run this once at the beginning of a new project, typically via an integrated tool like Cursor. Operates on the current working directory of the MCP server. 
-*   **Important:** Once complete, you *MUST* parse a prd in order to generate tasks. There will be no tasks files until then. The next step after initializing should be to create a PRD using the example PRD in .taskmaster/templates/example_prd.txt. 
+*   **Important:** Once complete, you *MUST* parse a prd in order to generate tasks. There will be no tasks files until then. The next step after initializing should be to create a PRD using the example PRD in .taskmaster/default/templates/example_prd.txt. 
 
 ### 2. Parse PRD (`parse_prd`)
 
@@ -45,12 +45,12 @@ This document provides a detailed reference for interacting with Taskmaster, cov
 *   **Description:** `Parse a Product Requirements Document, PRD, or text file with Taskmaster to automatically generate an initial set of tasks in tasks.json.`
 *   **Key Parameters/Options:**
     *   `input`: `Path to your PRD or requirements text file that Taskmaster should parse for tasks.` (CLI: `[file]` positional or `-i, --input <file>`)
-    *   `output`: `Specify where Taskmaster should save the generated 'tasks.json' file. Defaults to '.taskmaster/tasks/tasks.json'.` (CLI: `-o, --output <file>`)
+    *   `output`: `Specify where Taskmaster should save the generated 'tasks.json' file. Defaults to '.taskmaster/default/tasks/tasks.json'.` (CLI: `-o, --output <file>`)
     *   `numTasks`: `Approximate number of top-level tasks Taskmaster should aim to generate from the document.` (CLI: `-n, --num-tasks <number>`)
     *   `force`: `Use this to allow Taskmaster to overwrite an existing 'tasks.json' without asking for confirmation.` (CLI: `-f, --force`)
 *   **Usage:** Useful for bootstrapping a project from an existing requirements document.
 *   **Notes:** Task Master will strictly adhere to any specific requirements mentioned in the PRD, such as libraries, database schemas, frameworks, tech stacks, etc., while filling in any gaps where the PRD isn't fully specified. Tasks are designed to provide the most direct implementation path while avoiding over-engineering.
-*   **Important:** This MCP tool makes AI calls and can take up to a minute to complete. Please inform users to hang tight while the operation is in progress. If the user does not have a PRD, suggest discussing their idea and then use the example PRD in `.taskmaster/templates/example_prd.txt` as a template for creating the PRD based on their idea, for use with `parse-prd`.
+*   **Important:** This MCP tool makes AI calls and can take up to a minute to complete. Please inform users to hang tight while the operation is in progress. If the user does not have a PRD, suggest discussing their idea and then use the example PRD in `.taskmaster/default/templates/example_prd.txt` as a template for creating the PRD based on their idea, for use with `parse-prd`.
 
 ---
 
@@ -129,6 +129,7 @@ This document provides a detailed reference for interacting with Taskmaster, cov
     *   `prompt`: `Required. Describe the new task you want Taskmaster to create, e.g., "Implement user authentication using JWT".` (CLI: `-p, --prompt <text>`)
     *   `dependencies`: `Specify the IDs of any Taskmaster tasks that must be completed before this new one can start, e.g., '12,14'.` (CLI: `-d, --dependencies <ids>`)
     *   `priority`: `Set the priority for the new task: 'high', 'medium', or 'low'. Default is 'medium'.` (CLI: `--priority <priority>`)
+    *   `executor`: `Specify who should execute this task: 'agent' (AI) or 'human'. Default is 'agent'.` (CLI: `--executor <executor>`)
     *   `research`: `Enable Taskmaster to use the research role for potentially more informed task creation.` (CLI: `-r, --research`)
     *   `file`: `Path to your Taskmaster 'tasks.json' file. Default relies on auto-detection.` (CLI: `-f, --file <file>`)
 *   **Usage:** Quickly add newly identified tasks during development.
@@ -146,7 +147,8 @@ This document provides a detailed reference for interacting with Taskmaster, cov
     *   `description`: `A brief description for the new subtask.` (CLI: `-d, --description <text>`)
     *   `details`: `Provide implementation notes or details for the new subtask.` (CLI: `--details <text>`)
     *   `dependencies`: `Specify IDs of other tasks or subtasks, e.g., '15' or '16.1', that must be done before this new subtask.` (CLI: `--dependencies <ids>`)
-    *   `status`: `Set the initial status for the new subtask. Default is 'pending'.` (CLI: `-s, --status <status>`)
+*   `status`: `Set the initial status for the new subtask. Default is 'pending'.` (CLI: `-s, --status <status>`)
+*   `executor`: `Specify who should execute this subtask: 'agent' (AI) or 'human'. Default is 'agent'.` (CLI: `--executor <executor>`)
     *   `skipGenerate`: `Prevent Taskmaster from automatically regenerating markdown task files after adding the subtask.` (CLI: `--skip-generate`)
     *   `file`: `Path to your Taskmaster 'tasks.json' file. Default relies on auto-detection.` (CLI: `-f, --file <file>`)
 *   **Usage:** Break down tasks manually or reorganize existing tasks.
@@ -401,6 +403,51 @@ Environment variables are used **only** for sensitive API keys related to AI pro
     *   `OLLAMA_BASE_URL` (Default: `http://localhost:11434/api`)
 
 **Set API keys** in your **`.env`** file in the project root (for CLI use) or within the `env` section of your **`.cursor/mcp.json`** file (for MCP/Cursor integration). All other settings (model choice, max tokens, temperature, log level, custom endpoints) are managed in `.taskmaster/config.json` via `task-master models` command or `models` MCP tool.
+
+---
+
+## Task Executor Guidelines for AI Agents
+
+### ⚠️ Critical: Respecting Task Executor Settings
+
+**LLMs and AI agents MUST respect the `executor` field in all task operations:**
+
+- **Tasks with `"executor": "human"`** should **NEVER** be automatically executed, implemented, or modified by AI agents
+- **Tasks with `"executor": "agent"`** (or no executor field) can be executed by AI agents
+- When viewing tasks via `get_tasks`, `next_task`, or `get_task`, **clearly indicate** which tasks are human-only
+- When filtering or suggesting next tasks, **exclude tasks marked for human execution** unless specifically requested
+
+### Implementation Guidelines
+
+- **Display Format**: Human-executor tasks should be clearly marked in all output (e.g., with 🧑 icon or "HUMAN-ONLY" label)
+- **Next Task Logic**: The `next_task` command should skip human-executor tasks unless no agent tasks are available
+- **Task Creation**: When creating tasks with AI tools, default to `"executor": "agent"` but allow override via parameters
+- **Status Updates**: AI agents can update status of human-executor tasks (e.g., to track progress) but should not implement them
+
+### Use Cases for Human Executor
+
+- **Manual deployment tasks** requiring specific credentials or approvals
+- **User interface design decisions** requiring human creativity and judgment  
+- **Client communication** and requirements gathering
+- **Security reviews** and compliance audits
+- **Hardware configuration** or physical setup tasks
+- **Business decisions** requiring human stakeholder input
+
+### Example Task Filtering
+
+```javascript
+// ✅ CORRECT: Filter out human tasks when showing next available work
+const agentTasks = tasks.filter(task => 
+  task.executor !== 'human' && 
+  task.status === 'pending' && 
+  allDependenciesMet(task)
+);
+
+// ❌ WRONG: Include human tasks in automatic execution
+const allPendingTasks = tasks.filter(task => task.status === 'pending');
+```
+
+**Remember: The executor field is a safety mechanism to prevent AI agents from attempting tasks that require human judgment, approval, or manual intervention.**
 
 ---
 

@@ -51,7 +51,13 @@ import {
 	ConfigurationError,
 	isConfigFilePresent,
 	getAvailableModels,
-	getBaseUrlForRole
+	getBaseUrlForRole,
+	// Task group management
+	getWorkingTaskGroup,
+	setWorkingTaskGroup,
+	listTaskGroups,
+	createTaskGroup,
+	taskGroupExists
 } from './config-manager.js';
 
 import {
@@ -1498,6 +1504,15 @@ function registerCommands(programInstance) {
 			'medium'
 		)
 		.option(
+			'--assignees <assignees>',
+			'Comma-separated list of people or teams assigned to this task'
+		)
+		.option(
+			'--executor <executor>',
+			'Who should execute this task: "agent" or "human" (default: agent)',
+			'agent'
+		)
+		.option(
 			'-r, --research',
 			'Whether to use research capabilities for task creation'
 		)
@@ -1509,6 +1524,16 @@ function registerCommands(programInstance) {
 				console.error(
 					chalk.red(
 						'Error: Either --prompt or both --title and --description must be provided'
+					)
+				);
+				process.exit(1);
+			}
+
+			// Validate executor option
+			if (options.executor && !['agent', 'human'].includes(options.executor)) {
+				console.error(
+					chalk.red(
+						'Error: --executor must be either "agent" or "human"'
 					)
 				);
 				process.exit(1);
@@ -1558,6 +1583,21 @@ function registerCommands(programInstance) {
 				console.log(chalk.blue(`Priority: ${options.priority}`));
 			}
 
+			// Parse assignees from comma-separated string
+			const assigneesArray = options.assignees
+				? options.assignees.split(',').map((assignee) => assignee.trim()).filter(Boolean)
+				: [];
+			if (assigneesArray.length > 0) {
+				console.log(
+					chalk.blue(`Assignees: [${assigneesArray.join(', ')}]`)
+				);
+			}
+
+			// Log executor
+			if (options.executor) {
+				console.log(chalk.blue(`Executor: ${options.executor}`));
+			}
+
 			const context = {
 				projectRoot,
 				commandName: 'add-task',
@@ -1573,7 +1613,9 @@ function registerCommands(programInstance) {
 					context,
 					'text',
 					manualTaskData,
-					options.research
+					options.research,
+					assigneesArray,
+					options.executor
 				);
 
 				// addTask handles detailed CLI success logging AND telemetry display when outputFormat is 'text'
@@ -1776,7 +1818,12 @@ function registerCommands(programInstance) {
 			'--dependencies <ids>',
 			'Comma-separated list of dependency IDs for the new subtask'
 		)
+		.option(
+			'--assignees <assignees>',
+			'Comma-separated list of assignees for the new subtask'
+		)
 		.option('-s, --status <status>', 'Status for the new subtask', 'pending')
+		.option('--executor <executor>', 'Who should execute this subtask: "agent" or "human" (default: "agent")')
 		.option('--skip-generate', 'Skip regenerating task files')
 		.action(async (options) => {
 			const tasksPath = options.file || TASKMASTER_TASKS_FILE;
@@ -1794,6 +1841,16 @@ function registerCommands(programInstance) {
 				process.exit(1);
 			}
 
+			// Validate executor option
+			if (options.executor && !['agent', 'human'].includes(options.executor)) {
+				console.error(
+					chalk.red(
+						'Error: --executor must be either "agent" or "human"'
+					)
+				);
+				process.exit(1);
+			}
+
 			// Parse dependencies if provided
 			let dependencies = [];
 			if (options.dependencies) {
@@ -1801,6 +1858,12 @@ function registerCommands(programInstance) {
 					// Handle both regular IDs and dot notation
 					return id.includes('.') ? id.trim() : parseInt(id.trim(), 10);
 				});
+			}
+
+			// Parse assignees if provided
+			let assignees = [];
+			if (options.assignees) {
+				assignees = options.assignees.split(',').map((assignee) => assignee.trim());
 			}
 
 			try {
@@ -1834,7 +1897,9 @@ function registerCommands(programInstance) {
 						description: options.description || '',
 						details: options.details || '',
 						status: options.status || 'pending',
-						dependencies: dependencies
+						dependencies: dependencies,
+						assignees: assignees,
+						executor: options.executor || 'agent'
 					};
 
 					const subtask = await addSubtask(
@@ -1861,8 +1926,14 @@ function registerCommands(programInstance) {
 								'\n' +
 								chalk.white(`Status: ${getStatusWithColor(subtask.status)}`) +
 								'\n' +
+								chalk.white(`Executor: ${subtask.executor || 'agent'}`) +
+								'\n' +
 								(dependencies.length > 0
 									? chalk.white(`Dependencies: ${dependencies.join(', ')}`) +
+										'\n'
+									: '') +
+								(assignees.length > 0
+									? chalk.white(`Assignees: ${assignees.join(', ')}`) +
 										'\n'
 									: '') +
 								'\n' +
@@ -1900,7 +1971,7 @@ function registerCommands(programInstance) {
 								chalk.white('Create new subtask:') +
 								'\n' +
 								chalk.yellow(
-									`  task-master add-subtask --parent=5 --title="Implement login UI" --description="Create the login form"`
+									`  task-master add-subtask --parent=5 --title="Implement login UI" --description="Create the login form" --executor=agent`
 								) +
 								'\n\n',
 							{ padding: 1, borderColor: 'blue', borderStyle: 'round' }
@@ -1924,7 +1995,7 @@ function registerCommands(programInstance) {
 	function showAddSubtaskHelp() {
 		console.log(
 			boxen(
-				`${chalk.white.bold('Add Subtask Command Help')}\n\n${chalk.cyan('Usage:')}\n  task-master add-subtask --parent=<id> [options]\n\n${chalk.cyan('Options:')}\n  -p, --parent <id>         Parent task ID (required)\n  -i, --task-id <id>        Existing task ID to convert to subtask\n  -t, --title <title>       Title for the new subtask\n  -d, --description <text>  Description for the new subtask\n  --details <text>          Implementation details for the new subtask\n  --dependencies <ids>      Comma-separated list of dependency IDs\n  -s, --status <status>     Status for the new subtask (default: "pending")\n  -f, --file <file>         Path to the tasks file (default: "${TASKMASTER_TASKS_FILE}")\n  --skip-generate           Skip regenerating task files\n\n${chalk.cyan('Examples:')}\n  task-master add-subtask --parent=5 --task-id=8\n  task-master add-subtask -p 5 -t "Implement login UI" -d "Create the login form"`,
+				`${chalk.white.bold('Add Subtask Command Help')}\n\n${chalk.cyan('Usage:')}\n  task-master add-subtask --parent=<id> [options]\n\n${chalk.cyan('Options:')}\n  -p, --parent <id>         Parent task ID (required)\n  -i, --task-id <id>        Existing task ID to convert to subtask\n  -t, --title <title>       Title for the new subtask\n  -d, --description <text>  Description for the new subtask\n  --details <text>          Implementation details for the new subtask\n  --dependencies <ids>      Comma-separated list of dependency IDs\n  --assignees <assignees>    Comma-separated list of assignees\n  -s, --status <status>     Status for the new subtask (default: "pending")\n  --executor <executor>     Who should execute this subtask: "agent" or "human" (default: "agent")\n  -f, --file <file>         Path to the tasks file (default: "${TASKMASTER_TASKS_FILE}")\n  --skip-generate           Skip regenerating task files\n\n${chalk.cyan('Examples:')}\n  task-master add-subtask --parent=5 --task-id=8\n  task-master add-subtask -p 5 -t "Implement login UI" -d "Create the login form" --executor=agent`,
 				{ padding: 1, borderColor: 'blue', borderStyle: 'round' }
 			)
 		);
@@ -2802,6 +2873,166 @@ Examples:
 
 			if (!success) {
 				console.error(chalk.red('❌ Failed to sync tasks to README.md'));
+				process.exit(1);
+			}
+		});
+
+	// Task group management commands
+	programInstance
+		.command('taskgroup:create')
+		.description('Create a new task group')
+		.argument('<name>', 'Name of the task group to create')
+		.action(async (name) => {
+			try {
+				const projectRoot = findProjectRoot();
+				if (!projectRoot) {
+					console.error(
+						chalk.red(
+							'Error: Could not find project root. Make sure you are in a Task Master project directory.'
+						)
+					);
+					process.exit(1);
+				}
+
+				// Check if task group already exists
+				if (taskGroupExists(name, projectRoot)) {
+					console.error(chalk.red(`❌ Task group '${name}' already exists.`));
+					process.exit(1);
+				}
+
+				// Create the task group
+				const success = createTaskGroup(name, projectRoot);
+				if (!success) {
+					process.exit(1);
+				}
+
+				// Ask if user wants to switch to the new task group
+				const { switchToNew } = await inquirer.prompt([
+					{
+						type: 'confirm',
+						name: 'switchToNew',
+						message: `Do you want to switch to the new task group '${name}'?`,
+						default: true
+					}
+				]);
+
+				if (switchToNew) {
+					setWorkingTaskGroup(name, projectRoot);
+				}
+			} catch (error) {
+				console.error(chalk.red('Error creating task group:'), error.message);
+				process.exit(1);
+			}
+		});
+
+	programInstance
+		.command('taskgroup:list')
+		.description('List all task groups in the project')
+		.action(async () => {
+			try {
+				const projectRoot = findProjectRoot();
+				if (!projectRoot) {
+					console.error(
+						chalk.red(
+							'Error: Could not find project root. Make sure you are in a Task Master project directory.'
+						)
+					);
+					process.exit(1);
+				}
+
+				const taskGroups = listTaskGroups(projectRoot);
+				const workingTaskGroup = getWorkingTaskGroup(projectRoot);
+
+				if (taskGroups.length === 0) {
+					console.log(chalk.yellow('📂 No task groups found.'));
+					console.log(chalk.blue('💡 Use \'taskgroup:create <name>\' to create your first task group.'));
+					return;
+				}
+
+				console.log(chalk.blue('📂 Task Groups:'));
+				console.log();
+
+				taskGroups.forEach(group => {
+					const isWorking = group === workingTaskGroup;
+					const prefix = isWorking ? chalk.green('● ') : chalk.gray('○ ');
+					const name = isWorking ? chalk.green.bold(group) : chalk.white(group);
+					const suffix = isWorking ? chalk.green(' (current)') : '';
+					
+					console.log(`${prefix}${name}${suffix}`);
+				});
+
+				console.log();
+				console.log(chalk.gray('💡 Use \'taskgroup:switch <name>\' to change the working task group.'));
+			} catch (error) {
+				console.error(chalk.red('Error listing task groups:'), error.message);
+				process.exit(1);
+			}
+		});
+
+	programInstance
+		.command('taskgroup:switch')
+		.description('Switch to a different task group')
+		.argument('<name>', 'Name of the task group to switch to')
+		.action(async (name) => {
+			try {
+				const projectRoot = findProjectRoot();
+				if (!projectRoot) {
+					console.error(
+						chalk.red(
+							'Error: Could not find project root. Make sure you are in a Task Master project directory.'
+						)
+					);
+					process.exit(1);
+				}
+
+				// Check if task group exists
+				if (!taskGroupExists(name, projectRoot)) {
+					console.error(chalk.red(`❌ Task group '${name}' does not exist.`));
+					console.log(chalk.blue('💡 Use \'taskgroup:list\' to see available task groups.'));
+					console.log(chalk.blue('💡 Use \'taskgroup:create <name>\' to create a new task group.'));
+					process.exit(1);
+				}
+
+				// Switch to the task group
+				const success = setWorkingTaskGroup(name, projectRoot);
+				if (!success) {
+					process.exit(1);
+				}
+			} catch (error) {
+				console.error(chalk.red('Error switching task group:'), error.message);
+				process.exit(1);
+			}
+		});
+
+	programInstance
+		.command('taskgroup')
+		.description('Show current task group information')
+		.action(async () => {
+			try {
+				const projectRoot = findProjectRoot();
+				if (!projectRoot) {
+					console.error(
+						chalk.red(
+							'Error: Could not find project root. Make sure you are in a Task Master project directory.'
+						)
+					);
+					process.exit(1);
+				}
+
+				const currentTaskGroup = getWorkingTaskGroup(projectRoot);
+				const allTaskGroups = listTaskGroups(projectRoot);
+
+				console.log(chalk.blue('📂 Task Group Information:'));
+				console.log();
+				console.log(chalk.gray('Current task group:'), chalk.green.bold(currentTaskGroup));
+				console.log(chalk.gray('Available task groups:'), allTaskGroups.length > 0 ? allTaskGroups.join(', ') : 'None');
+				console.log();
+				console.log(chalk.gray('Commands:'));
+				console.log(chalk.gray('  taskgroup:list        '), 'List all task groups');
+				console.log(chalk.gray('  taskgroup:create <name>'), 'Create a new task group');
+				console.log(chalk.gray('  taskgroup:switch <name>'), 'Switch to a different task group');
+			} catch (error) {
+				console.error(chalk.red('Error showing task group information:'), error.message);
 				process.exit(1);
 			}
 		});

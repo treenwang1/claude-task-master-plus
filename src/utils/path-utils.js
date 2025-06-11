@@ -8,13 +8,42 @@ import fs from 'fs';
 import {
 	TASKMASTER_TASKS_FILE,
 	LEGACY_TASKS_FILE,
-	TASKMASTER_DOCS_DIR,
-	TASKMASTER_REPORTS_DIR,
 	COMPLEXITY_REPORT_FILE,
 	TASKMASTER_CONFIG_FILE,
-	LEGACY_CONFIG_FILE
+	LEGACY_CONFIG_FILE,
+	DEFAULT_TASK_GROUP,
+	getTaskGroupTasksFile,
+	getTaskGroupDocsDir,
+	getTaskGroupReportsDir,
+	getTaskGroupComplexityReportFile,
+	getTaskGroupPrdFile
 } from '../constants/paths.js';
 import { getLoggerOrDefault } from './logger-utils.js';
+
+// Import config manager with lazy loading to avoid circular dependencies
+let configManager = null;
+function getConfigManager() {
+	if (!configManager) {
+		// Lazy import to avoid circular dependency
+		configManager = import('../../scripts/modules/config-manager.js');
+	}
+	return configManager;
+}
+
+/**
+ * Gets the working task group from configuration, with fallback to default
+ * @param {string|null} projectRoot - Project root directory
+ * @returns {string} The working task group name
+ */
+async function getWorkingTaskGroup(projectRoot = null) {
+	try {
+		const config = await getConfigManager();
+		return config.getWorkingTaskGroup(projectRoot);
+	} catch (error) {
+		// Fallback to default if config is not available
+		return DEFAULT_TASK_GROUP;
+	}
+}
 
 /**
  * Normalize project root to ensure it doesn't end with .taskmaster
@@ -79,13 +108,13 @@ export function findProjectRoot(startDir = process.cwd()) {
 }
 
 /**
- * Find the tasks.json file path with fallback logic
+ * Find the tasks.json file path with fallback logic and task group support
  * @param {string|null} explicitPath - Explicit path provided by user (highest priority)
  * @param {Object|null} args - Args object from MCP args (optional)
  * @param {Object|null} log - Logger object (optional)
- * @returns {string|null} - Resolved tasks.json path or null if not found
+ * @returns {Promise<string|null>} - Resolved tasks.json path or null if not found
  */
-export function findTasksPath(explicitPath = null, args = null, log = null) {
+export async function findTasksPath(explicitPath = null, args = null, log = null) {
 	// Use the passed logger if available, otherwise use the default logger
 	const logger = getLoggerOrDefault(log);
 
@@ -116,9 +145,14 @@ export function findTasksPath(explicitPath = null, args = null, log = null) {
 		}
 	}
 
-	// 4. Check possible locations in order of preference
+	// 4. Get working task group and check task group-specific path first
+	const taskGroup = await getWorkingTaskGroup(projectRoot);
+	const taskGroupTasksFile = path.join(projectRoot, getTaskGroupTasksFile(taskGroup));
+	
+	// 5. Check possible locations in order of preference
 	const possiblePaths = [
-		path.join(projectRoot, TASKMASTER_TASKS_FILE), // .taskmaster/tasks/tasks.json (NEW)
+		taskGroupTasksFile, // .taskmaster/{taskgroup}/tasks/tasks.json (NEW with task groups)
+		path.join(projectRoot, TASKMASTER_TASKS_FILE), // .taskmaster/tasks/tasks.json (LEGACY)
 		path.join(projectRoot, LEGACY_TASKS_FILE) // tasks/tasks.json (LEGACY)
 	];
 
@@ -142,6 +176,13 @@ export function findTasksPath(explicitPath = null, args = null, log = null) {
 				logger.warn?.(
 					`⚠️  DEPRECATION WARNING: Found tasks.json in legacy root location '${tasksPath}'. Please migrate to the new .taskmaster directory structure. Run 'task-master migrate' to automatically migrate your project.`
 				);
+			} else if (
+				tasksPath === path.join(projectRoot, TASKMASTER_TASKS_FILE) &&
+				taskGroup !== DEFAULT_TASK_GROUP
+			) {
+				logger.warn?.(
+					`⚠️  Using legacy .taskmaster/tasks/tasks.json location. Consider using task group-specific location: ${taskGroupTasksFile}`
+				);
 			}
 
 			return tasksPath;
@@ -153,13 +194,13 @@ export function findTasksPath(explicitPath = null, args = null, log = null) {
 }
 
 /**
- * Find the PRD document file path with fallback logic
+ * Find the PRD document file path with fallback logic and task group support
  * @param {string|null} explicitPath - Explicit path provided by user (highest priority)
  * @param {Object|null} args - Args object for MCP context (optional)
  * @param {Object|null} log - Logger object (optional)
- * @returns {string|null} - Resolved PRD document path or null if not found
+ * @returns {Promise<string|null>} - Resolved PRD document path or null if not found
  */
-export function findPRDPath(explicitPath = null, args = null, log = null) {
+export async function findPRDPath(explicitPath = null, args = null, log = null) {
 	const logger = getLoggerOrDefault(log);
 
 	// 1. If explicit path is provided, use it (highest priority)
@@ -189,9 +230,13 @@ export function findPRDPath(explicitPath = null, args = null, log = null) {
 	// 3. Normalize project root to prevent double .taskmaster paths
 	const projectRoot = normalizeProjectRoot(rawProjectRoot);
 
-	// 4. Check possible locations in order of preference
+	// 4. Get working task group
+	const taskGroup = await getWorkingTaskGroup(projectRoot);
+	
+	// 5. Check possible locations in order of preference
 	const locations = [
-		TASKMASTER_DOCS_DIR, // .taskmaster/docs/ (NEW)
+		getTaskGroupDocsDir(taskGroup), // .taskmaster/{taskgroup}/docs/ (NEW with task groups)
+		TASKMASTER_DOCS_DIR, // .taskmaster/docs/ (LEGACY)
 		'scripts/', // Legacy location
 		'' // Project root
 	];
@@ -221,13 +266,13 @@ export function findPRDPath(explicitPath = null, args = null, log = null) {
 }
 
 /**
- * Find the complexity report file path with fallback logic
+ * Find the complexity report file path with fallback logic and task group support
  * @param {string|null} explicitPath - Explicit path provided by user (highest priority)
  * @param {Object|null} args - Args object for MCP context (optional)
  * @param {Object|null} log - Logger object (optional)
- * @returns {string|null} - Resolved complexity report path or null if not found
+ * @returns {Promise<string|null>} - Resolved complexity report path or null if not found
  */
-export function findComplexityReportPath(
+export async function findComplexityReportPath(
 	explicitPath = null,
 	args = null,
 	log = null
@@ -261,9 +306,13 @@ export function findComplexityReportPath(
 	// 3. Normalize project root to prevent double .taskmaster paths
 	const projectRoot = normalizeProjectRoot(rawProjectRoot);
 
-	// 4. Check possible locations in order of preference
+	// 4. Get working task group
+	const taskGroup = await getWorkingTaskGroup(projectRoot);
+
+	// 5. Check possible locations in order of preference
 	const locations = [
-		TASKMASTER_REPORTS_DIR, // .taskmaster/reports/ (NEW)
+		getTaskGroupReportsDir(taskGroup), // .taskmaster/{taskgroup}/reports/ (NEW with task groups)
+		TASKMASTER_REPORTS_DIR, // .taskmaster/reports/ (LEGACY)
 		'scripts/', // Legacy location
 		'' // Project root
 	];
@@ -293,13 +342,13 @@ export function findComplexityReportPath(
 }
 
 /**
- * Resolve output path for tasks.json (create if needed)
+ * Resolve output path for tasks.json (create if needed) with task group support
  * @param {string|null} explicitPath - Explicit output path provided by user
  * @param {Object|null} args - Args object for MCP context (optional)
  * @param {Object|null} log - Logger object (optional)
- * @returns {string} - Resolved output path for tasks.json
+ * @returns {Promise<string>} - Resolved output path for tasks.json
  */
-export function resolveTasksOutputPath(
+export async function resolveTasksOutputPath(
 	explicitPath = null,
 	args = null,
 	log = null
@@ -323,9 +372,11 @@ export function resolveTasksOutputPath(
 	// 3. Normalize project root to prevent double .taskmaster paths
 	const projectRoot = normalizeProjectRoot(rawProjectRoot);
 
-	// 4. Use new .taskmaster structure by default
-	const defaultPath = path.join(projectRoot, TASKMASTER_TASKS_FILE);
-	logger.info?.(`Using default output path: ${defaultPath}`);
+	// 4. Get working task group and use task group-specific path
+	const taskGroup = await getWorkingTaskGroup(projectRoot);
+	const defaultPath = path.join(projectRoot, getTaskGroupTasksFile(taskGroup));
+	
+	logger.info?.(`Using task group '${taskGroup}' output path: ${defaultPath}`);
 
 	// Ensure the directory exists
 	const outputDir = path.dirname(defaultPath);
@@ -338,13 +389,13 @@ export function resolveTasksOutputPath(
 }
 
 /**
- * Resolve output path for complexity report (create if needed)
+ * Resolve output path for complexity report (create if needed) with task group support
  * @param {string|null} explicitPath - Explicit output path provided by user
  * @param {Object|null} args - Args object for MCP context (optional)
  * @param {Object|null} log - Logger object (optional)
- * @returns {string} - Resolved output path for complexity report
+ * @returns {Promise<string>} - Resolved output path for complexity report
  */
-export function resolveComplexityReportOutputPath(
+export async function resolveComplexityReportOutputPath(
 	explicitPath = null,
 	args = null,
 	log = null
@@ -370,9 +421,11 @@ export function resolveComplexityReportOutputPath(
 	// 3. Normalize project root to prevent double .taskmaster paths
 	const projectRoot = normalizeProjectRoot(rawProjectRoot);
 
-	// 4. Use new .taskmaster structure by default
-	const defaultPath = path.join(projectRoot, COMPLEXITY_REPORT_FILE);
-	logger.info?.(`Using default complexity report output path: ${defaultPath}`);
+	// 4. Get working task group and use task group-specific path
+	const taskGroup = await getWorkingTaskGroup(projectRoot);
+	const defaultPath = path.join(projectRoot, getTaskGroupComplexityReportFile(taskGroup));
+	
+	logger.info?.(`Using task group '${taskGroup}' complexity report output path: ${defaultPath}`);
 
 	// Ensure the directory exists
 	const outputDir = path.dirname(defaultPath);

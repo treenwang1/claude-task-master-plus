@@ -1161,6 +1161,21 @@ async function displayTaskById(
 			colWidths: [15, Math.min(75, process.stdout.columns - 20 || 60)],
 			wordWrap: true
 		});
+		// Format subtask assignees (inherit from parent if subtask has no assignees)
+		let subtaskAssigneesText = 'None';
+		if (task.assignees && task.assignees.length > 0) {
+			subtaskAssigneesText = task.assignees
+				.map(assignee => chalk.cyan(assignee))
+				.join(', ');
+		} else if (task.parentTask && task.parentTask.assignees && task.parentTask.assignees.length > 0) {
+			// Inherit from parent task
+			subtaskAssigneesText = task.parentTask.assignees
+				.map(assignee => chalk.dim(chalk.gray(assignee)))
+				.join(', ');
+		} else {
+			subtaskAssigneesText = chalk.gray('None');
+		}
+
 		subtaskTable.push(
 			[chalk.cyan.bold('ID:'), `${task.parentTask.id}.${task.id}`],
 			[
@@ -1172,12 +1187,17 @@ async function displayTaskById(
 				chalk.cyan.bold('Status:'),
 				getStatusWithColor(task.status || 'pending', true)
 			],
+			[chalk.cyan.bold('Assignees:'), subtaskAssigneesText],
+			[
+				chalk.cyan.bold('Executor:'),
+				task.executor ? chalk.magenta(task.executor) : chalk.gray('agent')
+			],
 			[
 				chalk.cyan.bold('Complexity:'),
 				task.complexityScore
 					? getComplexityWithColor(task.complexityScore)
 					: chalk.gray('N/A')
-			],
+				],
 			[
 				chalk.cyan.bold('Description:'),
 				task.description || 'No description provided.'
@@ -1246,6 +1266,16 @@ async function displayTaskById(
 	};
 	const priorityColor =
 		priorityColors[task.priority || 'medium'] || chalk.white;
+	// Format assignees
+	let assigneesText = 'None';
+	if (task.assignees && task.assignees.length > 0) {
+		assigneesText = task.assignees
+			.map(assignee => chalk.cyan(assignee))
+			.join(', ');
+	} else {
+		assigneesText = chalk.gray('None');
+	}
+
 	taskTable.push(
 		[chalk.cyan.bold('ID:'), task.id.toString()],
 		[chalk.cyan.bold('Title:'), task.title],
@@ -1262,6 +1292,11 @@ async function displayTaskById(
 				true,
 				complexityReport
 			)
+		],
+		[chalk.cyan.bold('Assignees:'), assigneesText],
+		[
+			chalk.cyan.bold('Executor:'),
+			task.executor ? chalk.magenta(task.executor) : chalk.gray('agent')
 		],
 		[
 			chalk.cyan.bold('Complexity:'),
@@ -1311,10 +1346,12 @@ async function displayTaskById(
 		const availableWidth = process.stdout.columns - 10 || 100;
 		const idWidthPct = 10;
 		const statusWidthPct = 15;
-		const depsWidthPct = 25;
-		const titleWidthPct = 100 - idWidthPct - statusWidthPct - depsWidthPct;
+		const assigneesWidthPct = 15;
+		const depsWidthPct = 20;
+		const titleWidthPct = 100 - idWidthPct - statusWidthPct - assigneesWidthPct - depsWidthPct;
 		const idWidth = Math.floor(availableWidth * (idWidthPct / 100));
 		const statusWidth = Math.floor(availableWidth * (statusWidthPct / 100));
+		const assigneesWidth = Math.floor(availableWidth * (assigneesWidthPct / 100));
 		const depsWidth = Math.floor(availableWidth * (depsWidthPct / 100));
 		const titleWidth = Math.floor(availableWidth * (titleWidthPct / 100));
 
@@ -1323,9 +1360,10 @@ async function displayTaskById(
 				chalk.magenta.bold('ID'),
 				chalk.magenta.bold('Status'),
 				chalk.magenta.bold('Title'),
+				chalk.magenta.bold('Assignees'),
 				chalk.magenta.bold('Deps')
 			],
-			colWidths: [idWidth, statusWidth, titleWidth, depsWidth],
+			colWidths: [idWidth, statusWidth, titleWidth, assigneesWidth, depsWidth],
 			style: {
 				head: [],
 				border: [],
@@ -1377,10 +1415,26 @@ async function displayTaskById(
 						? formattedDeps[0]
 						: formattedDeps.join(chalk.white(', '));
 			}
+			// Format subtask assignees (inherit from parent if subtask has no assignees)
+			let subtaskAssignees = 'None';
+			if (st.assignees && st.assignees.length > 0) {
+				subtaskAssignees = st.assignees
+					.map(assignee => chalk.dim(chalk.cyan(assignee)))
+					.join(', ');
+			} else if (task.assignees && task.assignees.length > 0) {
+				// Inherit from parent task
+				subtaskAssignees = task.assignees
+					.map(assignee => chalk.dim(chalk.gray(assignee)))
+					.join(', ');
+			} else {
+				subtaskAssignees = chalk.dim(chalk.gray('None'));
+			}
+
 			subtaskTable.push([
 				`${task.id}.${st.id}`,
 				statusColor(st.status || 'pending'),
 				st.title,
+				subtaskAssignees,
 				subtaskDeps
 			]);
 		});

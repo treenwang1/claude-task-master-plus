@@ -28,7 +28,8 @@ const prdSingleTaskSchema = z.object({
 	testStrategy: z.string().optional().default(''),
 	priority: z.enum(['high', 'medium', 'low']).default('medium'),
 	dependencies: z.array(z.number().int().positive()).optional().default([]),
-	status: z.string().optional().default('pending')
+	status: z.string().optional().default('pending'),
+	executor: z.enum(['agent', 'human']).optional().default('agent')
 });
 
 // Define the Zod schema for the ENTIRE expected AI response object

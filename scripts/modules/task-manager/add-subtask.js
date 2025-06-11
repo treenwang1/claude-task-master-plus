@@ -121,6 +121,8 @@ async function addSubtask(
 				details: newSubtaskData.details || '',
 				status: newSubtaskData.status || 'pending',
 				dependencies: newSubtaskData.dependencies || [],
+				assignees: newSubtaskData.assignees || [],
+				executor: newSubtaskData.executor || 'agent',
 				parentTaskId: parentIdNum
 			};
 

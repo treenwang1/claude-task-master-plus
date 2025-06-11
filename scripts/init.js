@@ -28,13 +28,15 @@ import { execSync } from 'child_process';
 import {
 	EXAMPLE_PRD_FILE,
 	TASKMASTER_CONFIG_FILE,
-	TASKMASTER_TEMPLATES_DIR,
 	TASKMASTER_DIR,
-	TASKMASTER_TASKS_DIR,
-	TASKMASTER_DOCS_DIR,
-	TASKMASTER_REPORTS_DIR,
 	ENV_EXAMPLE_FILE,
-	GITIGNORE_FILE
+	GITIGNORE_FILE,
+	DEFAULT_TASK_GROUP,
+	getTaskGroupPath,
+	getTaskGroupTasksDir,
+	getTaskGroupDocsDir,
+	getTaskGroupReportsDir,
+	getTaskGroupTemplatesDir
 } from '../src/constants/paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -489,10 +491,16 @@ function createProjectStructure(addAliases, dryRun, options) {
 
 	// Create NEW .taskmaster directory structure (using constants)
 	ensureDirectoryExists(path.join(targetDir, TASKMASTER_DIR));
-	ensureDirectoryExists(path.join(targetDir, TASKMASTER_TASKS_DIR));
-	ensureDirectoryExists(path.join(targetDir, TASKMASTER_DOCS_DIR));
-	ensureDirectoryExists(path.join(targetDir, TASKMASTER_REPORTS_DIR));
-	ensureDirectoryExists(path.join(targetDir, TASKMASTER_TEMPLATES_DIR));
+	
+	// Create default task group structure
+	const defaultTaskGroupPath = getTaskGroupPath(DEFAULT_TASK_GROUP);
+	ensureDirectoryExists(path.join(targetDir, defaultTaskGroupPath));
+	ensureDirectoryExists(path.join(targetDir, getTaskGroupTasksDir(DEFAULT_TASK_GROUP)));
+	ensureDirectoryExists(path.join(targetDir, getTaskGroupDocsDir(DEFAULT_TASK_GROUP)));
+	ensureDirectoryExists(path.join(targetDir, getTaskGroupReportsDir(DEFAULT_TASK_GROUP)));
+	ensureDirectoryExists(path.join(targetDir, getTaskGroupTemplatesDir(DEFAULT_TASK_GROUP)));
+	
+	log('success', `Created default task group '${DEFAULT_TASK_GROUP}' structure`);
 
 	// Setup MCP configuration for integration with Cursor
 	setupMCPConfiguration(targetDir);

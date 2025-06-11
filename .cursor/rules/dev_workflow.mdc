@@ -97,6 +97,10 @@ Task Master offers two primary ways to interact:
 - **priority**: Importance level (Example: `"high"`, `"medium"`, `"low"`)
 - **details**: In-depth implementation instructions (Example: `"Use GitHub client ID/secret, handle callback, set session token."`) 
 - **testStrategy**: Verification approach (Example: `"Deploy and call endpoint to confirm 'Hello World' response."`) 
+- **executor**: Who should execute this task (Example: `"agent"`, `"human"`)
+    - `"agent"`: Task should be executed by AI agents automatically
+    - `"human"`: Task requires manual execution by humans and should not be auto-executed by LLMs
+    - Defaults to `"agent"` if not specified
 - **subtasks**: List of smaller, more specific tasks (Example: `[{"id": 1, "title": "Configure OAuth", ...}]`) 
 - Refer to task structure details (previously linked to `tasks.mdc`).
 

@@ -41,7 +41,12 @@ const subtaskSchema = z
 		testStrategy: z
 			.string()
 			.optional()
-			.describe('Approach for testing this subtask')
+			.describe('Approach for testing this subtask'),
+		executor: z
+			.enum(['agent', 'human'])
+			.optional()
+			.default('agent')
+			.describe('Who should execute this subtask: "agent" for AI agents or "human" for manual execution')
 	})
 	.strict();
 const subtaskArraySchema = z.array(subtaskSchema);

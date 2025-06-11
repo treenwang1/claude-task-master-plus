@@ -22,7 +22,12 @@
 		"inspector": "npx @modelcontextprotocol/inspector node mcp-server/server.js",
 		"mcp-server": "node mcp-server/server.js",
 		"format-check": "biome format .",
-		"format": "biome format . --write"
+		"format": "biome format . --write",
+		"tasks": "./bin/task-master.js list",
+		"taskgroup": "./bin/task-master.js taskgroup",
+		"taskgroup:list": "./bin/task-master.js taskgroup:list",
+		"taskgroup:create": "./bin/task-master.js taskgroup:create",
+		"taskgroup:switch": "./bin/task-master.js taskgroup:switch"
 	},
 	"keywords": [
 		"claude",

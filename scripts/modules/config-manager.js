@@ -5,6 +5,14 @@ import { fileURLToPath } from 'url';
 import { log, findProjectRoot, resolveEnvVariable } from './utils.js';
 import { LEGACY_CONFIG_FILE } from '../../src/constants/paths.js';
 import { findConfigPath } from '../../src/utils/path-utils.js';
+import { 
+	DEFAULT_TASK_GROUP,
+	getTaskGroupPath,
+	getTaskGroupTasksDir,
+	getTaskGroupDocsDir,
+	getTaskGroupReportsDir,
+	getTaskGroupTemplatesDir
+} from '../../src/constants/paths.js';
 
 // Calculate __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -750,6 +758,146 @@ function getBaseUrlForRole(role, explicitRoot = null) {
 		: undefined;
 }
 
+/**
+ * Gets the working task group from configuration.
+ * @param {string|null} explicitRoot - Optional explicit path to the project root.
+ * @returns {string} The working task group name (defaults to 'default').
+ */
+function getWorkingTaskGroup(explicitRoot = null) {
+	const config = getConfig(explicitRoot);
+	return config.global?.workingTaskGroup || DEFAULT_TASK_GROUP;
+}
+
+/**
+ * Sets the working task group in configuration.
+ * @param {string} taskGroupName - The name of the task group to set as working.
+ * @param {string|null} explicitRoot - Optional explicit path to the project root.
+ * @returns {boolean} True if successful, false otherwise.
+ */
+function setWorkingTaskGroup(taskGroupName, explicitRoot = null) {
+	if (!taskGroupName || typeof taskGroupName !== 'string') {
+		console.error(chalk.red('Error: Task group name must be a non-empty string.'));
+		return false;
+	}
+
+	// Validate task group name (no special characters that would break paths)
+	if (!/^[a-zA-Z0-9_-]+$/.test(taskGroupName)) {
+		console.error(chalk.red('Error: Task group name can only contain letters, numbers, hyphens, and underscores.'));
+		return false;
+	}
+
+	const config = getConfig(explicitRoot);
+	if (!config.global) {
+		config.global = {};
+	}
+	
+	config.global.workingTaskGroup = taskGroupName;
+	
+	const success = writeConfig(config, explicitRoot);
+	if (success) {
+		console.log(chalk.green(`✓ Working task group set to: ${taskGroupName}`));
+	}
+	return success;
+}
+
+/**
+ * Lists all task groups in the project.
+ * @param {string|null} explicitRoot - Optional explicit path to the project root.
+ * @returns {string[]} Array of task group names.
+ */
+function listTaskGroups(explicitRoot = null) {
+	const rootPath = explicitRoot || findProjectRoot();
+	if (!rootPath) {
+		console.error(chalk.red('Error: Could not determine project root.'));
+		return [];
+	}
+
+	const taskmasterDir = path.join(rootPath, '.taskmaster');
+	if (!fs.existsSync(taskmasterDir)) {
+		return [];
+	}
+
+	try {
+		const entries = fs.readdirSync(taskmasterDir, { withFileTypes: true });
+		const taskGroups = entries
+			.filter(entry => entry.isDirectory())
+			.map(entry => entry.name)
+			.filter(name => name !== 'node_modules' && !name.startsWith('.'));
+
+		return taskGroups.sort();
+	} catch (error) {
+		console.error(chalk.red(`Error reading task groups: ${error.message}`));
+		return [];
+	}
+}
+
+/**
+ * Creates a new task group directory structure.
+ * @param {string} taskGroupName - The name of the task group to create.
+ * @param {string|null} explicitRoot - Optional explicit path to the project root.
+ * @returns {boolean} True if successful, false otherwise.
+ */
+function createTaskGroup(taskGroupName, explicitRoot = null) {
+	if (!taskGroupName || typeof taskGroupName !== 'string') {
+		console.error(chalk.red('Error: Task group name must be a non-empty string.'));
+		return false;
+	}
+
+	// Validate task group name
+	if (!/^[a-zA-Z0-9_-]+$/.test(taskGroupName)) {
+		console.error(chalk.red('Error: Task group name can only contain letters, numbers, hyphens, and underscores.'));
+		return false;
+	}
+
+	const rootPath = explicitRoot || findProjectRoot();
+	if (!rootPath) {
+		console.error(chalk.red('Error: Could not determine project root.'));
+		return false;
+	}
+
+	try {
+		// Create task group directory structure
+		const taskGroupPath = path.join(rootPath, getTaskGroupPath(taskGroupName));
+		const tasksDir = path.join(rootPath, getTaskGroupTasksDir(taskGroupName));
+		const docsDir = path.join(rootPath, getTaskGroupDocsDir(taskGroupName));
+		const reportsDir = path.join(rootPath, getTaskGroupReportsDir(taskGroupName));
+		const templatesDir = path.join(rootPath, getTaskGroupTemplatesDir(taskGroupName));
+
+		// Create directories
+		fs.mkdirSync(taskGroupPath, { recursive: true });
+		fs.mkdirSync(tasksDir, { recursive: true });
+		fs.mkdirSync(docsDir, { recursive: true });
+		fs.mkdirSync(reportsDir, { recursive: true });
+		fs.mkdirSync(templatesDir, { recursive: true });
+
+		// Create empty tasks.json file
+		const tasksFile = path.join(tasksDir, 'tasks.json');
+		fs.writeFileSync(tasksFile, JSON.stringify([], null, 2));
+
+		console.log(chalk.green(`✓ Task group '${taskGroupName}' created successfully.`));
+		return true;
+	} catch (error) {
+		console.error(chalk.red(`Error creating task group '${taskGroupName}': ${error.message}`));
+		return false;
+	}
+}
+
+/**
+ * Checks if a task group exists.
+ * @param {string} taskGroupName - The name of the task group to check.
+ * @param {string|null} explicitRoot - Optional explicit path to the project root.
+ * @returns {boolean} True if the task group exists, false otherwise.
+ */
+function taskGroupExists(taskGroupName, explicitRoot = null) {
+	const rootPath = explicitRoot || findProjectRoot();
+	if (!rootPath) {
+		return false;
+	}
+
+	const taskGroupPath = path.join(rootPath, getTaskGroupPath(taskGroupName));
+	return fs.existsSync(taskGroupPath) && fs.statSync(taskGroupPath).isDirectory();
+}
+
 export {
 	// Core config access
 	getConfig,
@@ -794,5 +942,11 @@ export {
 	// ADD: Function to get all provider names
 	getAllProviders,
 	getVertexProjectId,
-	getVertexLocation
+	getVertexLocation,
+	// Task group management
+	getWorkingTaskGroup,
+	setWorkingTaskGroup,
+	listTaskGroups,
+	createTaskGroup,
+	taskGroupExists
 };

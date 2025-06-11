@@ -1,0 +1,46 @@
+{
+  "version": "1.0.0",
+  "name": "Test Project",
+  "description": "Test project for assignee functionality",
+  "tasks": [
+    {
+      "id": 1,
+      "title": "Test task with multiple assignees",
+      "description": "A test task to verify assignee functionality works correctly",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": [],
+      "assignees": ["john.doe", "jane.smith", "bob.johnson"],
+      "details": "This task tests the assignee functionality in the Task Master application",
+      "testStrategy": "Verify that assignees are displayed correctly in all views",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Subtask with inherited assignees",
+          "description": "Tests assignee inheritance",
+          "status": "pending",
+          "details": "Should inherit assignees from parent task"
+        },
+        {
+          "id": 2,
+          "title": "Subtask with own assignees",
+          "description": "Tests subtask-specific assignees",
+          "status": "in-progress",
+          "assignees": ["alice.cooper"],
+          "details": "Should show its own assignees, not inherit from parent"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Task with no assignees",
+      "description": "A task without any assignees assigned",
+      "status": "done",
+      "priority": "low",
+      "dependencies": [],
+      "assignees": [],
+      "details": "This task has no assignees to test the 'None' display",
+      "testStrategy": "Verify that 'None' is displayed when no assignees are set"
+    }
+  ]
+} 

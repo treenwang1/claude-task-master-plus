@@ -26,18 +26,30 @@ your-project/
 
 ```
 your-project/
-├── .taskmaster/              # Consolidated Task Master files
+├── .taskmaster              # Consolidated Task Master files
 │   ├── config.json          # Configuration (was .taskmasterconfig)
-│   ├── tasks/               # Task files
-│   │   ├── tasks.json
-│   │   ├── task-1.txt
-│   │   └── task-2.txt
-│   ├── docs/                # Project documentation
-│   │   └── prd.txt
-│   ├── reports/             # Generated reports
-│   │   └── task-complexity-report.json
-│   └── templates/           # Example/template files
-│       └── example_prd.txt
+│   ├── default              # Consolidated Task Master files
+│   │   ├── tasks/               # Task files
+│   │   │   ├── tasks.json
+│   │   │   ├── task-1.txt
+│   │   │   └── task-2.txt
+│   │   ├── docs/                # Project documentation
+│   │   │   └── prd.txt
+│   │   ├── reports/             # Generated reports
+│   │   │   └── task-complexity-report.json
+│   │   └── templates/           # Example/template files
+│   │       └── example_prd.txt
+│   ├── taskgroup1  
+│   │   ├── tasks/               # Task files
+│   │   │   ├── tasks.json
+│   │   │   ├── task-1.txt
+│   │   │   └── task-2.txt
+│   │   ├── docs/                # Project documentation
+│   │   │   └── prd.txt
+│   │   ├── reports/             # Generated reports
+│   │   │   └── task-complexity-report.json
+│   │   └── templates/           # Example/template files
+│   │       └── example_prd.txt
 └── ... (your project files)
 ```
 

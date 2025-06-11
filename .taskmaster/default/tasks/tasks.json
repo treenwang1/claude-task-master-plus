@@ -10,6 +10,9 @@
       "details": "Create the foundational data structure including:\n- JSON schema for tasks.json\n- Task model with all required fields (id, title, description, status, dependencies, priority, details, testStrategy, subtasks)\n- Validation functions for the task model\n- Basic file system operations for reading/writing tasks.json\n- Error handling for file operations",
       "testStrategy": "Verify that the tasks.json structure can be created, read, and validated. Test with sample data to ensure all fields are properly handled and that validation correctly identifies invalid structures.",
       "subtasks": [],
+      "assignees": [
+        "eyal.toledano@gmail.com"
+      ],
       "previousStatus": "in-progress"
     },
     {

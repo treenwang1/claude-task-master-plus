@@ -38,6 +38,7 @@ const updatedTaskSchema = z
 		priority: z.string().optional(),
 		details: z.string().optional(),
 		testStrategy: z.string().optional(),
+		executor: z.enum(['agent', 'human']).optional().default('agent'),
 		subtasks: z.array(z.any()).optional()
 	})
 	.strip(); // Allows parsing even if AI adds extra fields, but validation focuses on schema

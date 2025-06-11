@@ -36,7 +36,15 @@ const AiTaskDataSchema = z.object({
 		.optional()
 		.describe(
 			'Array of task IDs that this task depends on (must be completed before this task can start)'
-		)
+		),
+	assignees: z
+		.array(z.string())
+		.optional()
+		.describe('Array of people or teams assigned to this task (usernames, emails, or team names)'),
+	executor: z
+		.enum(['agent', 'human'])
+		.optional()
+		.describe('Who should execute this task: "agent" for AI agents to handle automatically, "human" for manual execution by humans. Defaults to "agent".')
 });
 
 /**
@@ -56,6 +64,8 @@ const AiTaskDataSchema = z.object({
  * @param {string} [context.projectRoot] - Project root path (for MCP/env fallback)
  * @param {string} [context.commandName] - The name of the command being executed (for telemetry)
  * @param {string} [context.outputType] - The output type ('cli' or 'mcp', for telemetry)
+ * @param {Array<string>} assignees - Array of people or teams assigned to this task (optional)
+ * @param {string} executor - Who should execute this task: "agent" or "human" (optional, defaults to "agent")
  * @returns {Promise<object>} An object containing newTaskId and telemetryData
  */
 async function addTask(
@@ -66,7 +76,9 @@ async function addTask(
 	context = {},
 	outputFormat = 'text', // Default to text for CLI
 	manualTaskData = null,
-	useResearch = false
+	useResearch = false,
+	assignees = [],
+	executor = 'agent'
 ) {
 	const { session, mcpLog, projectRoot, commandName, outputType } = context;
 	const isMCP = !!mcpLog;
@@ -898,7 +910,9 @@ async function addTask(
 					systemPrompt: systemPrompt,
 					prompt: userPrompt,
 					commandName: commandName || 'add-task', // Use passed commandName or default
-					outputType: outputType || (isMCP ? 'mcp' : 'cli') // Use passed outputType or derive
+					outputType: outputType || (isMCP ? 'mcp' : 'cli'), // Use passed outputType or derive
+					assignees: assignees,
+					executor: executor
 				});
 				report('DEBUG: generateObjectService returned successfully.', 'debug');
 
@@ -968,7 +982,9 @@ async function addTask(
 				? taskData.dependencies
 				: numericDependencies, // Use AI-suggested dependencies if available, fallback to manually specified
 			priority: effectivePriority,
-			subtasks: [] // Initialize with empty subtasks array
+			subtasks: [], // Initialize with empty subtasks array
+			assignees: assignees,
+			executor: taskData.executor || executor // Use AI-suggested executor if available, fallback to provided executor
 		};
 
 		// Additional check: validate all dependencies in the AI response

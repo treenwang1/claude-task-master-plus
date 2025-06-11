@@ -59,6 +59,10 @@ function findNextTask(tasks, complexityReport = null) {
 				const stStatus = (st.status || 'pending').toLowerCase();
 				if (stStatus !== 'pending' && stStatus !== 'in-progress') return;
 
+				// Filter out human-only subtasks for AI agents
+				const stExecutor = st.executor || 'agent';
+				if (stExecutor === 'human') return;
+
 				const fullDeps =
 					st.dependencies?.map((d) => toFullSubId(parent.id, d)) ?? [];
 
@@ -73,7 +77,8 @@ function findNextTask(tasks, complexityReport = null) {
 						status: st.status || 'pending',
 						priority: st.priority || parent.priority || 'medium',
 						dependencies: fullDeps,
-						parentId: parent.id
+						parentId: parent.id,
+						executor: stExecutor
 					});
 				}
 			});
@@ -109,6 +114,11 @@ function findNextTask(tasks, complexityReport = null) {
 	const eligibleTasks = tasks.filter((task) => {
 		const status = (task.status || 'pending').toLowerCase();
 		if (status !== 'pending' && status !== 'in-progress') return false;
+		
+		// Filter out human-only tasks for AI agents
+		const taskExecutor = task.executor || 'agent';
+		if (taskExecutor === 'human') return false;
+		
 		const deps = task.dependencies ?? [];
 		return deps.every((depId) => completedIds.has(String(depId)));
 	});

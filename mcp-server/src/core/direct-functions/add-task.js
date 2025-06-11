@@ -21,6 +21,8 @@ import { createLogWrapper } from '../../tools/utils.js';
  * @param {string} [args.testStrategy] - Test strategy (for manual task creation)
  * @param {string} [args.dependencies] - Comma-separated list of task IDs this task depends on
  * @param {string} [args.priority='medium'] - Task priority (high, medium, low)
+ * @param {string} [args.assignees] - Comma-separated list of people or teams assigned to this task
+ * @param {string} [args.executor='agent'] - Who should execute this task: "agent" or "human"
  * @param {string} [args.tasksJsonPath] - Path to the tasks.json file (resolved by tool)
  * @param {boolean} [args.research=false] - Whether to use research capabilities for task creation
  * @param {string} [args.projectRoot] - Project root path
@@ -35,6 +37,8 @@ export async function addTaskDirect(args, log, context = {}) {
 		prompt,
 		dependencies,
 		priority,
+		assignees,
+		executor,
 		research,
 		projectRoot
 	} = args;
@@ -91,6 +95,16 @@ export async function addTaskDirect(args, log, context = {}) {
 						.map((id) => parseInt(id.trim(), 10)) // Split, trim, and parse
 				: []; // Default to empty array if null/undefined
 		const taskPriority = priority || 'medium'; // Default priority
+		
+		// Process assignees from comma-separated string to array
+		const taskAssignees = Array.isArray(assignees)
+			? assignees // Already an array if passed directly
+			: assignees // Check if assignees exist and are a string
+				? String(assignees)
+						.split(',')
+						.map((assignee) => assignee.trim()) // Split and trim
+						.filter(Boolean) // Remove empty strings
+				: []; // Default to empty array if null/undefined
 
 		let manualTaskData = null;
 		let newTaskId;
@@ -106,7 +120,7 @@ export async function addTaskDirect(args, log, context = {}) {
 			};
 
 			log.info(
-				`Adding new task manually with title: "${args.title}", dependencies: [${taskDependencies.join(', ')}], priority: ${priority}`
+				`Adding new task manually with title: "${args.title}", dependencies: [${taskDependencies.join(', ')}], priority: ${priority}, assignees: [${taskAssignees.join(', ')}], executor: ${executor || 'agent'}`
 			);
 
 			// Call the addTask function with manual task data
@@ -125,14 +139,15 @@ export async function addTaskDirect(args, log, context = {}) {
 				'json', // outputFormat
 				manualTaskData, // Pass the manual task data
 				false, // research flag is false for manual creation
-				projectRoot // Pass projectRoot
+				taskAssignees, // Pass the assignees array
+				args.executor
 			);
 			newTaskId = result.newTaskId;
 			telemetryData = result.telemetryData;
 		} else {
 			// AI-driven task creation
 			log.info(
-				`Adding new task with prompt: "${prompt}", dependencies: [${taskDependencies.join(', ')}], priority: ${taskPriority}, research: ${research}`
+				`Adding new task with prompt: "${prompt}", dependencies: [${taskDependencies.join(', ')}], priority: ${taskPriority}, research: ${research}, assignees: [${taskAssignees.join(', ')}], executor: ${executor || 'agent'}`
 			);
 
 			// Call the addTask function, passing the research flag
@@ -150,7 +165,9 @@ export async function addTaskDirect(args, log, context = {}) {
 				},
 				'json', // outputFormat
 				null, // manualTaskData is null for AI creation
-				research // Pass the research flag
+				research, // Pass the research flag
+				taskAssignees, // Pass the assignees array
+				args.executor
 			);
 			newTaskId = result.newTaskId;
 			telemetryData = result.telemetryData;

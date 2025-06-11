@@ -1,34 +1,73 @@
 /**
  * Path constants for Task Master application
  */
-
+import fs from 'fs';
 // .taskmaster directory structure paths
 export const TASKMASTER_DIR = '.taskmaster';
-export const TASKMASTER_TASKS_DIR = '.taskmaster/tasks';
-export const TASKMASTER_DOCS_DIR = '.taskmaster/docs';
-export const TASKMASTER_REPORTS_DIR = '.taskmaster/reports';
-export const TASKMASTER_TEMPLATES_DIR = '.taskmaster/templates';
+
+
+// Task group dynamic path builders
+export function getTaskGroupPath(taskGroupName) {
+	return `${TASKMASTER_DIR}/${taskGroupName}`;
+}
+
+export function getTaskGroupTasksDir(taskGroupName) {
+	return `${TASKMASTER_DIR}/${taskGroupName}/tasks`;
+}
+
+export function getTaskGroupDocsDir(taskGroupName) {
+	return `${TASKMASTER_DIR}/${taskGroupName}/docs`;
+}
+
+export function getTaskGroupReportsDir(taskGroupName) {
+	return `${TASKMASTER_DIR}/${taskGroupName}/reports`;
+}
+
+export function getTaskGroupTemplatesDir(taskGroupName) {
+	return `${TASKMASTER_DIR}/${taskGroupName}/templates`;
+}
+
+export function getTaskGroupTasksFile(taskGroupName) {
+	return `${TASKMASTER_DIR}/${taskGroupName}/tasks/tasks.json`;
+}
+
+export function getTaskGroupComplexityReportFile(taskGroupName) {
+	return `${TASKMASTER_DIR}/${taskGroupName}/reports/task-complexity-report.json`;
+}
+
+export function getTaskGroupPrdFile(taskGroupName) {
+	return `${TASKMASTER_DIR}/${taskGroupName}/docs/prd.txt`;
+}
+
+export function getTaskGroupExamplePrdFile(taskGroupName) {
+	return `${TASKMASTER_DIR}/${taskGroupName}/templates/example_prd.txt`;
+}
 
 // Task Master configuration files
 export const TASKMASTER_CONFIG_FILE = '.taskmaster/config.json';
 export const LEGACY_CONFIG_FILE = '.taskmasterconfig';
 
-// Task Master report files
+export let DEFAULT_TASK_GROUP = 'default';
+if (fs.existsSync(TASKMASTER_CONFIG_FILE)) {
+	DEFAULT_TASK_GROUP = JSON.parse(fs.readFileSync(TASKMASTER_CONFIG_FILE))?.global?.workingTaskGroup ?? DEFAULT_TASK_GROUP;
+}
+
+// Task Master report files (legacy paths for backwards compatibility)
 export const COMPLEXITY_REPORT_FILE =
-	'.taskmaster/reports/task-complexity-report.json';
+	`.taskmaster/${DEFAULT_TASK_GROUP}/reports/task-complexity-report.json`;
 export const LEGACY_COMPLEXITY_REPORT_FILE =
 	'scripts/task-complexity-report.json';
 
-// Task Master PRD file paths
-export const PRD_FILE = '.taskmaster/docs/prd.txt';
+// Task Master PRD file paths (legacy paths for backwards compatibility)
+export const PRD_FILE = `.taskmaster/${DEFAULT_TASK_GROUP}/docs/prd.txt`;
 export const LEGACY_PRD_FILE = 'scripts/prd.txt';
 
-// Task Master template files
-export const EXAMPLE_PRD_FILE = '.taskmaster/templates/example_prd.txt';
+// Task Master template files (legacy paths for backwards compatibility)
+export const EXAMPLE_PRD_FILE = `.taskmaster/${DEFAULT_TASK_GROUP}/templates/example_prd.txt`;
 export const LEGACY_EXAMPLE_PRD_FILE = 'scripts/example_prd.txt';
 
-// Task Master task file paths
-export const TASKMASTER_TASKS_FILE = '.taskmaster/tasks/tasks.json';
+// Task Master task file paths (legacy paths for backwards compatibility)
+export const TASKMASTER_TASKS_FILE = `.taskmaster/${DEFAULT_TASK_GROUP}/tasks/tasks.json`;
 export const LEGACY_TASKS_FILE = 'tasks/tasks.json';
 
 // General project files (not Task Master specific but commonly used)

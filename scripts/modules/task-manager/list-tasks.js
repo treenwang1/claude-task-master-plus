@@ -457,18 +457,26 @@ function listTasks(
 		const priorityWidthPct = 12;
 
 		// Make dependencies column smaller as requested (-20%)
-		const depsWidthPct = 20;
+		const depsWidthPct = 18;
 
-		const complexityWidthPct = 10;
+		const complexityWidthPct = 8;
+		
+		// Add assignees column width
+		const assigneesWidthPct = 12;
+		
+		// Add executor column width
+		const executorWidthPct = 8;
 
-		// Calculate title/description width as remaining space (+20% from dependencies reduction)
+		// Calculate title/description width as remaining space
 		const titleWidthPct =
 			100 -
 			idWidthPct -
 			statusWidthPct -
 			priorityWidthPct -
 			depsWidthPct -
-			complexityWidthPct;
+			complexityWidthPct -
+			assigneesWidthPct -
+			executorWidthPct;
 
 		// Allow 10 characters for borders and padding
 		const availableWidth = terminalWidth - 10;
@@ -481,6 +489,8 @@ function listTasks(
 		const complexityWidth = Math.floor(
 			availableWidth * (complexityWidthPct / 100)
 		);
+		const assigneesWidth = Math.floor(availableWidth * (assigneesWidthPct / 100));
+		const executorWidth = Math.floor(availableWidth * (executorWidthPct / 100));
 		const titleWidth = Math.floor(availableWidth * (titleWidthPct / 100));
 
 		// Create a table with correct borders and spacing
@@ -491,6 +501,8 @@ function listTasks(
 				chalk.cyan.bold('Status'),
 				chalk.cyan.bold('Priority'),
 				chalk.cyan.bold('Dependencies'),
+				chalk.cyan.bold('Assignees'),
+				chalk.cyan.bold('Executor'),
 				chalk.cyan.bold('Complexity')
 			],
 			colWidths: [
@@ -499,6 +511,8 @@ function listTasks(
 				statusWidth,
 				priorityWidth,
 				depsWidth,
+				assigneesWidth,
+				executorWidth,
 				complexityWidth // Added complexity column width
 			],
 			style: {
@@ -526,6 +540,21 @@ function listTasks(
 				depText = chalk.gray('None');
 			}
 
+			// Format assignees
+			let assigneesText = 'None';
+			if (task.assignees && task.assignees.length > 0) {
+				assigneesText = task.assignees
+					.map(assignee => chalk.cyan(assignee))
+					.join(', ');
+			} else {
+				assigneesText = chalk.gray('None');
+			}
+
+			// Format executor
+			const executorText = task.executor === 'human' 
+				? chalk.yellow.bold('human') 
+				: chalk.green('agent');
+
 			// Clean up any ANSI codes or confusing characters
 			const cleanTitle = task.title.replace(/\n/g, ' ');
 
@@ -547,6 +576,8 @@ function listTasks(
 				status,
 				priorityColor(truncate(task.priority || 'medium', priorityWidth - 2)),
 				depText,
+				truncate(assigneesText, assigneesWidth - 2),
+				executorText,
 				task.complexityScore
 					? getComplexityWithColor(task.complexityScore)
 					: chalk.gray('N/A')
@@ -606,6 +637,27 @@ function listTasks(
 						subtaskDepText = formattedDeps || chalk.gray('None');
 					}
 
+					// Format subtask assignees (inherit from parent or show their own)
+					let subtaskAssigneesText = 'None';
+					if (subtask.assignees && subtask.assignees.length > 0) {
+						subtaskAssigneesText = subtask.assignees
+							.map(assignee => chalk.dim(chalk.cyan(assignee)))
+							.join(', ');
+					} else if (task.assignees && task.assignees.length > 0) {
+						// Inherit from parent task
+						subtaskAssigneesText = task.assignees
+							.map(assignee => chalk.dim(chalk.gray(assignee)))
+							.join(', ');
+					} else {
+						subtaskAssigneesText = chalk.dim(chalk.gray('None'));
+					}
+
+					// Format subtask executor (inherit from parent if not specified)
+					const subtaskExecutor = subtask.executor || task.executor || 'agent';
+					const subtaskExecutorText = subtaskExecutor === 'human' 
+						? chalk.dim(chalk.yellow('human'))
+						: chalk.dim(chalk.green('agent'));
+
 					// Add the subtask row without truncating dependencies
 					table.push([
 						`${task.id}.${subtask.id}`,
@@ -613,6 +665,8 @@ function listTasks(
 						getStatusWithColor(subtask.status, true),
 						chalk.dim('-'),
 						subtaskDepText,
+						truncate(subtaskAssigneesText, assigneesWidth - 2),
+						subtaskExecutorText,
 						subtask.complexityScore
 							? chalk.gray(`${subtask.complexityScore}`)
 							: chalk.gray('N/A')
@@ -701,7 +755,8 @@ function listTasks(
 						'\n\n' +
 						// Use nextItem.priority, nextItem.status, nextItem.dependencies
 						`${chalk.white('Priority:')} ${priorityColors[nextItem.priority || 'medium'](nextItem.priority || 'medium')}   ${chalk.white('Status:')} ${getStatusWithColor(nextItem.status, true)}\n` +
-						`${chalk.white('Dependencies:')} ${nextItem.dependencies && nextItem.dependencies.length > 0 ? formatDependenciesWithStatus(nextItem.dependencies, data.tasks, true, complexityReport) : chalk.gray('None')}\n\n` +
+						`${chalk.white('Dependencies:')} ${nextItem.dependencies && nextItem.dependencies.length > 0 ? formatDependenciesWithStatus(nextItem.dependencies, data.tasks, true, complexityReport) : chalk.gray('None')}\n` +
+						`${chalk.white('Assignees:')} ${nextItem.assignees && nextItem.assignees.length > 0 ? nextItem.assignees.map(assignee => chalk.cyan(assignee)).join(', ') : chalk.gray('None')}\n\n` +
 						// Use nextTask.description (Note: findNextTask doesn't return description, need to fetch original task/subtask for this)
 						// *** Fetching original item for description and details ***
 						`${chalk.white('Description:')} ${getWorkItemDescription(nextItem, data.tasks)}` +
@@ -873,11 +928,11 @@ function generateMarkdownOutput(data, filteredTasks, stats) {
 
 	// Tasks table
 	markdown +=
-		'┌───────────┬──────────────────────────────────────┬─────────────────┬──────────────┬───────────────────────┬───────────┐\n';
+		'┌───────────┬──────────────────────────────────────┬─────────────────┬──────────────┬───────────────────────┬───────────────┬─────────────┬───────────┐\n';
 	markdown +=
-		'│ ID        │ Title                                │ Status          │ Priority     │ Dependencies          │ Complexi… │\n';
+		'│ ID        │ Title                                │ Status          │ Priority     │ Dependencies          │ Assignees     │ Executor    │ Complexi… │\n';
 	markdown +=
-		'├───────────┼──────────────────────────────────────┼─────────────────┼──────────────┼───────────────────────┼───────────┤\n';
+		'├───────────┼──────────────────────────────────────┼─────────────────┼──────────────┼───────────────────────┼───────────────┼─────────────┼───────────┤\n';
 
 	// Helper function to format status with symbols
 	const getStatusSymbol = (status) => {
@@ -913,17 +968,30 @@ function generateMarkdownOutput(data, filteredTasks, stats) {
 			.join(', ');
 	};
 
+	// Helper function to format assignees for markdown
+	const formatAssigneesForMarkdown = (assignees) => {
+		if (!assignees || assignees.length === 0) return 'None';
+		return assignees.join(', ');
+	};
+
+	// Helper function to format executor for markdown
+	const formatExecutorForMarkdown = (executor) => {
+		return executor === 'human' ? 'human' : 'agent';
+	};
+
 	// Process all tasks
 	filteredTasks.forEach((task) => {
 		const taskTitle = task.title; // No truncation for README
 		const statusSymbol = getStatusSymbol(task.status);
 		const priority = task.priority || 'medium';
 		const deps = formatDependenciesForMarkdown(task.dependencies, data.tasks);
+		const assignees = formatAssigneesForMarkdown(task.assignees);
+		const executor = formatExecutorForMarkdown(task.executor || 'agent');
 		const complexity = task.complexityScore
 			? `● ${task.complexityScore}`
 			: 'N/A';
 
-		markdown += `│ ${task.id.toString().padEnd(9)} │ ${taskTitle.substring(0, 36).padEnd(36)} │ ${statusSymbol.padEnd(15)} │ ${priority.padEnd(12)} │ ${deps.substring(0, 21).padEnd(21)} │ ${complexity.padEnd(9)} │\n`;
+		markdown += `│ ${task.id.toString().padEnd(9)} │ ${taskTitle.substring(0, 36).padEnd(36)} │ ${statusSymbol.padEnd(15)} │ ${priority.padEnd(12)} │ ${deps.substring(0, 21).padEnd(21)} │ ${assignees.substring(0, 13).padEnd(13)} │ ${executor.padEnd(11)} │ ${complexity.padEnd(9)} │\n`;
 
 		// Add subtasks if requested
 		if (withSubtasks && task.subtasks && task.subtasks.length > 0) {
@@ -934,29 +1002,35 @@ function generateMarkdownOutput(data, filteredTasks, stats) {
 					subtask.dependencies,
 					data.tasks
 				);
+				const subtaskAssignees = formatAssigneesForMarkdown(
+					subtask.assignees && subtask.assignees.length > 0 
+						? subtask.assignees 
+						: task.assignees // Inherit from parent if subtask has no assignees
+				);
+				const subtaskExecutor = formatExecutorForMarkdown(subtask.executor || task.executor || 'agent');
 				const subtaskComplexity = subtask.complexityScore
 					? subtask.complexityScore.toString()
 					: 'N/A';
 
 				markdown +=
-					'├───────────┼──────────────────────────────────────┼─────────────────┼──────────────┼───────────────────────┼───────────┤\n';
-				markdown += `│ ${task.id}.${subtask.id}${' '.padEnd(6)} │ ${subtaskTitle.substring(0, 36).padEnd(36)} │ ${subtaskStatus.padEnd(15)} │ -            │ ${subtaskDeps.substring(0, 21).padEnd(21)} │ ${subtaskComplexity.padEnd(9)} │\n`;
+					'├───────────┼──────────────────────────────────────┼─────────────────┼──────────────┼───────────────────────┼───────────────┼─────────────┼───────────┤\n';
+				markdown += `│ ${task.id}.${subtask.id}${' '.padEnd(6)} │ ${subtaskTitle.substring(0, 36).padEnd(36)} │ ${subtaskStatus.padEnd(15)} │ -            │ ${subtaskDeps.substring(0, 21).padEnd(21)} │ ${subtaskAssignees.substring(0, 13).padEnd(13)} │ ${subtaskExecutor.padEnd(11)} │ ${subtaskComplexity.padEnd(9)} │\n`;
 			});
 		}
 
 		markdown +=
-			'├───────────┼──────────────────────────────────────┼─────────────────┼──────────────┼───────────────────────┼───────────┤\n';
+			'├───────────┼──────────────────────────────────────┼─────────────────┼──────────────┼───────────────────────┼───────────────┼─────────────┼───────────┤\n';
 	});
 
 	// Close the table
 	markdown = markdown.slice(
 		0,
 		-1 *
-			'├───────────┼──────────────────────────────────────┼─────────────────┼──────────────┼───────────────────────┼───────────┤\n'
+			'├───────────┼──────────────────────────────────────┼─────────────────┼──────────────┼───────────────────────┼───────────────┼─────────────┼───────────┤\n'
 				.length
 	);
 	markdown +=
-		'└───────────┴──────────────────────────────────────┴─────────────────┴──────────────┴───────────────────────┴───────────┘\n';
+		'└───────────┴──────────────────────────────────────┴─────────────────┴──────────────┴───────────────────────┴───────────────┴─────────────┴───────────┘\n';
 	markdown += '```\n\n';
 
 	// Next task recommendation
@@ -970,6 +1044,7 @@ function generateMarkdownOutput(data, filteredTasks, stats) {
 			'│                                                                                                                         │\n';
 		markdown += `│  Priority: ${nextItem.priority || 'medium'}   Status: ${getStatusSymbol(nextItem.status)}                                                                                     │\n`;
 		markdown += `│  Dependencies: ${nextItem.dependencies && nextItem.dependencies.length > 0 ? formatDependenciesForMarkdown(nextItem.dependencies, data.tasks) : 'None'}                                                                                                     │\n`;
+		markdown += `│  Assignees: ${nextItem.assignees && nextItem.assignees.length > 0 ? formatAssigneesForMarkdown(nextItem.assignees) : 'None'}                                                                                                     │\n`;
 		markdown +=
 			'│                                                                                                                         │\n';
 		markdown += `│  Description: ${getWorkItemDescription(nextItem, data.tasks)}     │\n`;

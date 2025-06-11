@@ -436,7 +436,8 @@ function findTaskById(
 			subtask.parentTask = {
 				id: parentTask.id,
 				title: parentTask.title,
-				status: parentTask.status
+				status: parentTask.status,
+				assignees: parentTask.assignees
 			};
 			subtask.isSubtask = true;
 		}

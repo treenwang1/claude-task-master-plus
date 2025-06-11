@@ -46,6 +46,10 @@ export function registerAddSubtaskTool(server) {
 				.string()
 				.optional()
 				.describe('Comma-separated list of dependency IDs for the new subtask'),
+			executor: z
+				.enum(['agent', 'human'])
+				.optional()
+				.describe('Specify who should execute this subtask: "agent" (AI) or "human". Default is "agent".'),
 			file: z
 				.string()
 				.optional()
@@ -88,6 +92,7 @@ export function registerAddSubtaskTool(server) {
 						details: args.details,
 						status: args.status,
 						dependencies: args.dependencies,
+						executor: args.executor,
 						skipGenerate: args.skipGenerate
 					},
 					log

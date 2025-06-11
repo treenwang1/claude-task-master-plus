@@ -19,6 +19,7 @@ import {
  * @param {string} [args.details] - Implementation details for new subtask
  * @param {string} [args.status] - Status for new subtask (default: 'pending')
  * @param {string} [args.dependencies] - Comma-separated list of dependency IDs
+ * @param {string} [args.executor='agent'] - Who should execute this subtask: "agent" or "human"
  * @param {boolean} [args.skipGenerate] - Skip regenerating task files
  * @param {Object} log - Logger object
  * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
@@ -34,6 +35,7 @@ export async function addSubtaskDirect(args, log) {
 		details,
 		status,
 		dependencies: dependenciesStr,
+		executor,
 		skipGenerate
 	} = args;
 	try {
@@ -127,7 +129,8 @@ export async function addSubtaskDirect(args, log) {
 				description: description || '',
 				details: details || '',
 				status: status || 'pending',
-				dependencies: dependencies
+				dependencies: dependencies,
+				executor: executor || 'agent'
 			};
 
 			const result = await addSubtask(
