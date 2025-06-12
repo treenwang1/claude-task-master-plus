@@ -2,7 +2,9 @@
 # Title: Add CLI JSON output and Cursor keybindings integration
 # Status: pending
 # Dependencies: None
+# Executor: agent
 # Priority: high
+# Assignees: treen wang
 # Description: Enhance Taskmaster CLI with JSON output option and add a new command to install pre-configured Cursor keybindings
 # Details:
 This task has two main components:\n\n1. Add `--json` flag to all relevant CLI commands:\n   - Modify the CLI command handlers to check for a `--json` flag\n   - When the flag is present, output the raw data from the MCP tools in JSON format instead of formatting for human readability\n   - Ensure consistent JSON schema across all commands\n   - Add documentation for this feature in the help text for each command\n   - Test with common scenarios like `task-master next --json` and `task-master show <id> --json`\n\n2. Create a new `install-keybindings` command:\n   - Create a new CLI command that installs pre-configured Taskmaster keybindings to Cursor\n   - Detect the user's OS to determine the correct path to Cursor's keybindings.json\n   - Check if the file exists; create it if it doesn't\n   - Add useful Taskmaster keybindings like:\n     - Quick access to next task with output to clipboard\n     - Task status updates\n     - Opening new agent chat with context from the current task\n   - Implement safeguards to prevent duplicate keybindings\n   - Add undo functionality or backup of previous keybindings\n   - Support custom key combinations via command flags

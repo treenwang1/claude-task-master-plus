@@ -894,6 +894,21 @@ async function displayNextTask(tasksPath, complexityReportPath = null) {
 	const priorityColor =
 		priorityColors[nextTask.priority || 'medium'] || chalk.white;
 
+	// Format assignees
+	let assigneesText = 'None';
+	if (nextTask.assignees && nextTask.assignees.length > 0) {
+		assigneesText = nextTask.assignees
+			.map(assignee => chalk.cyan(assignee))
+			.join(', ');
+	} else {
+		assigneesText = chalk.gray('None');
+	}
+
+	// Format executor
+	const executorText = nextTask.executor === 'human' 
+		? chalk.yellow.bold('human') 
+		: chalk.green('agent');
+
 	// Add task details to table
 	taskTable.push(
 		[chalk.cyan.bold('ID:'), nextTask.id.toString()],
@@ -911,6 +926,8 @@ async function displayNextTask(tasksPath, complexityReportPath = null) {
 				complexityReport
 			)
 		],
+		[chalk.cyan.bold('Assignees:'), assigneesText],
+		[chalk.cyan.bold('Executor:'), executorText],
 		[
 			chalk.cyan.bold('Complexity:'),
 			nextTask.complexityScore
@@ -956,13 +973,17 @@ async function displayNextTask(tasksPath, complexityReportPath = null) {
 
 		// Define percentage-based column widths
 		const idWidthPct = 8;
-		const statusWidthPct = 15;
-		const depsWidthPct = 25;
-		const titleWidthPct = 100 - idWidthPct - statusWidthPct - depsWidthPct;
+		const statusWidthPct = 12;
+		const assigneesWidthPct = 12;
+		const executorWidthPct = 8;
+		const depsWidthPct = 20;
+		const titleWidthPct = 100 - idWidthPct - statusWidthPct - assigneesWidthPct - executorWidthPct - depsWidthPct;
 
 		// Calculate actual column widths
 		const idWidth = Math.floor(availableWidth * (idWidthPct / 100));
 		const statusWidth = Math.floor(availableWidth * (statusWidthPct / 100));
+		const assigneesWidth = Math.floor(availableWidth * (assigneesWidthPct / 100));
+		const executorWidth = Math.floor(availableWidth * (executorWidthPct / 100));
 		const depsWidth = Math.floor(availableWidth * (depsWidthPct / 100));
 		const titleWidth = Math.floor(availableWidth * (titleWidthPct / 100));
 
@@ -972,9 +993,11 @@ async function displayNextTask(tasksPath, complexityReportPath = null) {
 				chalk.magenta.bold('ID'),
 				chalk.magenta.bold('Status'),
 				chalk.magenta.bold('Title'),
+				chalk.magenta.bold('Assignees'),
+				chalk.magenta.bold('Executor'),
 				chalk.magenta.bold('Deps')
 			],
-			colWidths: [idWidth, statusWidth, titleWidth, depsWidth],
+			colWidths: [idWidth, statusWidth, titleWidth, assigneesWidth, executorWidth, depsWidth],
 			style: {
 				head: [],
 				border: [],
@@ -995,6 +1018,26 @@ async function displayNextTask(tasksPath, complexityReportPath = null) {
 					pending: chalk.yellow,
 					'in-progress': chalk.blue
 				}[st.status || 'pending'] || chalk.white;
+
+			// Format subtask assignees (inherit from parent or show their own)
+			let subtaskAssigneesText = 'None';
+			if (st.assignees && st.assignees.length > 0) {
+				subtaskAssigneesText = st.assignees
+					.map(assignee => chalk.cyan(assignee))
+					.join(', ');
+			} else if (nextTask.assignees && nextTask.assignees.length > 0) {
+				// Inherit from parent task
+				subtaskAssigneesText = nextTask.assignees
+					.map(assignee => chalk.gray(assignee))
+					.join(', ');
+			} else {
+				subtaskAssigneesText = chalk.gray('None');
+			}
+
+			// Format subtask executor
+			const subtaskExecutorText = st.executor === 'human' 
+				? chalk.yellow.bold('human') 
+				: chalk.green('agent');
 
 			// Format subtask dependencies
 			let subtaskDeps = 'None';
@@ -1036,6 +1079,8 @@ async function displayNextTask(tasksPath, complexityReportPath = null) {
 				`${nextTask.id}.${st.id}`,
 				statusColor(st.status || 'pending'),
 				st.title,
+				subtaskAssigneesText,
+				subtaskExecutorText,
 				subtaskDeps
 			]);
 		});
