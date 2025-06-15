@@ -384,11 +384,15 @@ async function initializeProject(options = {}) {
 		const authorName = options.author || 'Vibe coder';
 		const dryRun = options.dryRun || false;
 		const addAliases = options.aliases || false;
+		const baseDir = options.baseDir || process.cwd();
+		const targetIde = options.ide || 'all';
 
 		if (dryRun) {
 			log('info', 'DRY RUN MODE: No files will be modified');
 			log('info', 'Would initialize Task Master project');
 			log('info', 'Would create/update necessary project files');
+			log('info', `Would initialize Task Master project in ${baseDir}`);
+			log('info', `Would target IDE: ${targetIde}`);
 			if (addAliases) {
 				log('info', 'Would add shell aliases for task-master');
 			}
@@ -444,6 +448,7 @@ async function initializeProject(options = {}) {
 				log('info', 'DRY RUN MODE: No files will be modified');
 				log('info', 'Would initialize Task Master project');
 				log('info', 'Would create/update necessary project files');
+				log('info', `Would initialize Task Master project in ${baseDir}`);
 				if (addAliasesPrompted) {
 					log('info', 'Would add shell aliases for task-master');
 				}
@@ -473,20 +478,38 @@ function promptQuestion(rl, question) {
 
 // Function to create the project structure
 function createProjectStructure(addAliases, dryRun, options) {
-	const targetDir = process.cwd();
+	const targetDir = options.baseDir || process.cwd();
+	const targetIde = options.ide || 'all';
+	
 	log('info', `Initializing project in ${targetDir}`);
+	if (targetIde !== 'all') {
+		log('info', `Target IDE: ${targetIde}`);
+	}
+
+	// Define supported IDEs and their configurations
+	const supportedIdes = ['cursor', 'windsurf', 'roo', 'all'];
+	
+	if (!supportedIdes.includes(targetIde)) {
+		log('warn', `Unsupported IDE '${targetIde}'. Supported options: ${supportedIdes.join(', ')}`);
+		log('info', 'Falling back to "all" IDEs setup');
+		targetIde = 'all';
+	}
 
 	// Define Roo modes locally (external integration, not part of core Task Master)
 	const ROO_MODES = ['architect', 'ask', 'boomerang', 'code', 'debug', 'test'];
 
-	// Create directories
-	ensureDirectoryExists(path.join(targetDir, '.cursor/rules'));
+	// Create IDE-specific directories based on target
+	if (targetIde === 'cursor' || targetIde === 'all') {
+		ensureDirectoryExists(path.join(targetDir, '.cursor/rules'));
+	}
 
-	// Create Roo directories
-	ensureDirectoryExists(path.join(targetDir, '.roo'));
-	ensureDirectoryExists(path.join(targetDir, '.roo/rules'));
-	for (const mode of ROO_MODES) {
-		ensureDirectoryExists(path.join(targetDir, '.roo', `rules-${mode}`));
+	if (targetIde === 'roo' || targetIde === 'all') {
+		// Create Roo directories
+		ensureDirectoryExists(path.join(targetDir, '.roo'));
+		ensureDirectoryExists(path.join(targetDir, '.roo/rules'));
+		for (const mode of ROO_MODES) {
+			ensureDirectoryExists(path.join(targetDir, '.roo', `rules-${mode}`));
+		}
 	}
 
 	// Create NEW .taskmaster directory structure (using constants)
@@ -502,8 +525,11 @@ function createProjectStructure(addAliases, dryRun, options) {
 	
 	log('success', `Created default task group '${DEFAULT_TASK_GROUP}' structure`);
 
-	// Setup MCP configuration for integration with Cursor
-	setupMCPConfiguration(targetDir);
+	// Setup IDE-specific configurations
+	if (targetIde === 'cursor' || targetIde === 'all') {
+		// Setup MCP configuration for integration with Cursor
+		setupMCPConfiguration(targetDir);
+	}
 
 	// Copy template files with replacements
 	const replacements = {
@@ -529,46 +555,86 @@ function createProjectStructure(addAliases, dryRun, options) {
 	// Copy .gitignore
 	copyTemplateFile('gitignore', path.join(targetDir, GITIGNORE_FILE));
 
-	// Copy dev_workflow.mdc
-	copyTemplateFile(
-		'dev_workflow.mdc',
-		path.join(targetDir, '.cursor/rules/dev_workflow.mdc')
-	);
-
-	// Copy taskmaster.mdc
-	copyTemplateFile(
-		'taskmaster.mdc',
-		path.join(targetDir, '.cursor/rules/taskmaster.mdc')
-	);
-
-	// Copy cursor_rules.mdc
-	copyTemplateFile(
-		'cursor_rules.mdc',
-		path.join(targetDir, '.cursor/rules/cursor_rules.mdc')
-	);
-
-	// Copy self_improve.mdc
-	copyTemplateFile(
-		'self_improve.mdc',
-		path.join(targetDir, '.cursor/rules/self_improve.mdc')
-	);
-
-	// Generate Roo rules from Cursor rules
-	log('info', 'Generating Roo rules from Cursor rules...');
-	convertAllCursorRulesToRooRules(targetDir);
-
-	// Copy .windsurfrules
-	copyTemplateFile('windsurfrules', path.join(targetDir, '.windsurfrules'));
-
-	// Copy .roomodes for Roo Code integration
-	copyTemplateFile('.roomodes', path.join(targetDir, '.roomodes'));
-
-	// Copy Roo rule files for each mode
-	for (const mode of ROO_MODES) {
+	// Copy Cursor-specific files
+	if (targetIde === 'cursor' || targetIde === 'all') {
+		// Copy dev_workflow.mdc
 		copyTemplateFile(
-			`${mode}-rules`,
-			path.join(targetDir, '.roo', `rules-${mode}`, `${mode}-rules`)
+			'dev_workflow.mdc',
+			path.join(targetDir, '.cursor/rules/dev_workflow.mdc')
 		);
+
+		// Copy taskmaster.mdc
+		copyTemplateFile(
+			'taskmaster.mdc',
+			path.join(targetDir, '.cursor/rules/taskmaster.mdc')
+		);
+
+		// Copy cursor_rules.mdc
+		copyTemplateFile(
+			'cursor_rules.mdc',
+			path.join(targetDir, '.cursor/rules/cursor_rules.mdc')
+		);
+
+		// Copy self_improve.mdc
+		copyTemplateFile(
+			'self_improve.mdc',
+			path.join(targetDir, '.cursor/rules/self_improve.mdc')
+		);
+	}
+
+	// Copy Windsurf-specific files
+	if (targetIde === 'windsurf' || targetIde === 'all') {
+		// Copy .windsurfrules
+		copyTemplateFile('windsurfrules', path.join(targetDir, '.windsurfrules'));
+	}
+
+	// Copy Roo-specific files
+	if (targetIde === 'roo' || targetIde === 'all') {
+		// Generate Roo rules from Cursor rules (requires Cursor rules to exist)
+		if (targetIde === 'all') {
+			log('info', 'Generating Roo rules from Cursor rules...');
+			convertAllCursorRulesToRooRules(targetDir);
+		} else {
+			// If only Roo is selected, we need to create minimal Cursor rules first for conversion
+			log('info', 'Creating minimal Cursor rules for Roo conversion...');
+			ensureDirectoryExists(path.join(targetDir, '.cursor/rules'));
+			
+			// Copy essential Cursor rules temporarily for conversion
+			copyTemplateFile(
+				'dev_workflow.mdc',
+				path.join(targetDir, '.cursor/rules/dev_workflow.mdc')
+			);
+			copyTemplateFile(
+				'taskmaster.mdc',
+				path.join(targetDir, '.cursor/rules/taskmaster.mdc')
+			);
+			copyTemplateFile(
+				'cursor_rules.mdc',
+				path.join(targetDir, '.cursor/rules/cursor_rules.mdc')
+			);
+			copyTemplateFile(
+				'self_improve.mdc',
+				path.join(targetDir, '.cursor/rules/self_improve.mdc')
+			);
+			
+			log('info', 'Generating Roo rules from Cursor rules...');
+			convertAllCursorRulesToRooRules(targetDir);
+			
+			// Remove temporary Cursor rules if only Roo was requested
+			log('info', 'Cleaning up temporary Cursor rules...');
+			fs.rmSync(path.join(targetDir, '.cursor'), { recursive: true, force: true });
+		}
+
+		// Copy .roomodes for Roo Code integration
+		copyTemplateFile('.roomodes', path.join(targetDir, '.roomodes'));
+
+		// Copy Roo rule files for each mode
+		for (const mode of ROO_MODES) {
+			copyTemplateFile(
+				`${mode}-rules`,
+				path.join(targetDir, '.roo', `rules-${mode}`, `${mode}-rules`)
+			);
+		}
 	}
 
 	// Copy example_prd.txt to NEW location

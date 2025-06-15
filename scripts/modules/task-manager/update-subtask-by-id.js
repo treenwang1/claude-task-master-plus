@@ -383,4 +383,99 @@ Output Requirements:
 	}
 }
 
+/**
+ * Shared validation and subtask lookup helper
+ * @param {string} tasksPath - Path to the tasks.json file
+ * @param {string} subtaskId - ID of the subtask in format "parentId.subtaskId"
+ * @returns {Object} - Object containing data, parentTask, subtaskIndex, and subtask
+ */
+function validateAndFindSubtask(tasksPath, subtaskId) {
+	if (!subtaskId || typeof subtaskId !== 'string' || !subtaskId.includes('.')) {
+		throw new Error(
+			`Invalid subtask ID format: ${subtaskId}. Subtask ID must be in format "parentId.subtaskId"`
+		);
+	}
+
+	const data = readJSON(tasksPath);
+	const [parentIdStr, subtaskIdStr] = subtaskId.split('.');
+	const parentId = parseInt(parentIdStr, 10);
+	const subtaskIdNum = parseInt(subtaskIdStr, 10);
+
+	if (
+		isNaN(parentId) ||
+		parentId <= 0 ||
+		isNaN(subtaskIdNum) ||
+		subtaskIdNum <= 0
+	) {
+		throw new Error(
+			`Invalid subtask ID format: ${subtaskId}. Both parent ID and subtask ID must be positive integers.`
+		);
+	}
+
+	const parentTask = data.tasks.find((task) => task.id === parentId);
+	if (!parentTask) {
+		throw new Error(`Parent task with ID ${parentId} not found.`);
+	}
+
+	if (!parentTask.subtasks || !Array.isArray(parentTask.subtasks)) {
+		throw new Error(`Parent task ${parentId} has no subtasks.`);
+	}
+
+	const subtaskIndex = parentTask.subtasks.findIndex(
+		(st) => st.id === subtaskIdNum
+	);
+	if (subtaskIndex === -1) {
+		throw new Error(`Subtask with ID ${subtaskId} not found.`);
+	}
+
+	return {
+		data,
+		parentTask,
+		subtaskIndex,
+		subtask: parentTask.subtasks[subtaskIndex]
+	};
+}
+
+/**
+ * Update multiple normal attributes of a subtask at once
+ * @param {string} tasksPath - Path to the tasks.json file
+ * @param {string} subtaskId - ID of the subtask to update in format "parentId.subtaskId"
+ * @param {Object} attributes - Object containing key-value pairs of attributes to update
+ * @returns {Promise<Object>} - Updated subtask data
+ */
+async function updateSubtaskNormalAttributesById(tasksPath, subtaskId, attributes) {
+	if (!attributes || typeof attributes !== 'object' || Object.keys(attributes).length === 0) {
+		throw new Error('Attributes object must be provided and contain at least one key-value pair');
+	}
+
+	const { data, parentTask, subtaskIndex } = validateAndFindSubtask(tasksPath, subtaskId);
+
+	// Update multiple subtask attributes
+	Object.keys(attributes).forEach(key => {
+		parentTask.subtasks[subtaskIndex][key] = attributes[key];
+	});
+
+	writeJSON(tasksPath, data);
+
+	return parentTask.subtasks[subtaskIndex];
+}
+
+/**
+ * Update a subtask's normal attributes (non-AI fields like assignees, executor, etc.)
+ * @param {string} tasksPath - Path to the tasks.json file
+ * @param {string} subtaskId - ID of the subtask to update in format "parentId.subtaskId"
+ * @param {string} key - Attribute key to update
+ * @param {any} value - New value for the attribute
+ * @returns {Promise<Object>} - Updated subtask data
+ */
+async function updateSubtaskNormalAttributeById(tasksPath, subtaskId, key, value) {
+	if (!key || typeof key !== 'string') {
+		throw new Error('Attribute key must be a non-empty string');
+	}
+
+	// Use the multiple attributes function with a single key-value pair
+	return await updateSubtaskNormalAttributesById(tasksPath, subtaskId, { [key]: value });
+}
+
 export default updateSubtaskById;
+export { updateSubtaskNormalAttributeById, updateSubtaskNormalAttributesById };

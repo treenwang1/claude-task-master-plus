@@ -19,7 +19,7 @@ import analyzeTaskComplexity from './task-manager/analyze-task-complexity.js';
 import findNextTask from './task-manager/find-next-task.js';
 import addSubtask from './task-manager/add-subtask.js';
 import removeSubtask from './task-manager/remove-subtask.js';
-import updateSubtaskById from './task-manager/update-subtask-by-id.js';
+import updateSubtaskById, { updateSubtaskNormalAttributeById, updateSubtaskNormalAttributesById } from './task-manager/update-subtask-by-id.js';
 import removeTask from './task-manager/remove-task.js';
 import taskExists from './task-manager/task-exists.js';
 import isTaskDependentOn from './task-manager/is-task-dependent.js';
@@ -32,6 +32,8 @@ export {
 	updateTasks,
 	updateTaskById,
 	updateSubtaskById,
+	updateSubtaskNormalAttributeById,
+	updateSubtaskNormalAttributesById,
 	generateTaskFiles,
 	setTaskStatus,
 	updateSingleTaskStatus,

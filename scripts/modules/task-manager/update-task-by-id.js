@@ -201,12 +201,52 @@ function parseUpdatedTaskFromText(text, expectedTaskId, logFn, isMCP) {
  * Update a single task by ID using the unified AI service.
  * @param {string} tasksPath - Path to the tasks.json file
  * @param {number} taskId - Task ID to update
- * @param {string} prompt - Prompt with new context
+ * @param {string} key - Key to update
+ * @param {string} value - Value to set
+ * @returns {Promise<Object>} - Updated task data
+ */
+async function updateTaskNormalAttributeById(tasksPath, taskId, key, value) {
+	const data = readJSON(tasksPath);
+	const tasksToUpdate = data.tasks.find(
+		(task) => task.id === taskId
+	);
+
+	tasksToUpdate[key] = value;
+	writeJSON(tasksPath, data);
+
+	return updatedTasks;
+}
+
+/**
+ * Update a single task by ID using the unified AI service.
+ * @param {string} tasksPath - Path to the tasks.json file
+ * @param {number} taskId - Task ID to update
+ * @param {Object} attributes - Attributes to update
+ * @returns {Promise<Object>} - Updated task data
+ */
+async function updateTaskNormalAttributesById(tasksPath, taskId, attributes) {
+	const data = readJSON(tasksPath);
+	const tasksToUpdate = data.tasks.find(
+		(task) => task.id === taskId
+	);
+	
+	// merge attributes into tasksToUpdate
+	Object.assign(tasksToUpdate, attributes);
+
+	writeJSON(tasksPath, data);
+}
+
+/**
+ * Update a single task by ID using the unified AI service and/or normal attribute updates.
+ * @param {string} tasksPath - Path to the tasks.json file
+ * @param {number} taskId - Task ID to update
+ * @param {string} prompt - Prompt with new context (optional)
  * @param {boolean} [useResearch=false] - Whether to use the research AI role.
  * @param {Object} context - Context object containing session and mcpLog.
  * @param {Object} [context.session] - Session object from MCP server.
  * @param {Object} [context.mcpLog] - MCP logger object.
  * @param {string} [outputFormat='text'] - Output format ('text' or 'json').
+ * @param {Object} [normalAttributes={}] - Object of normal (non-AI) attributes to update (e.g. assignees, executor)
  * @returns {Promise<Object|null>} - Updated task data or null if task wasn't updated/found.
  */
 async function updateTaskById(
@@ -215,7 +255,8 @@ async function updateTaskById(
 	prompt,
 	useResearch = false,
 	context = {},
-	outputFormat = 'text'
+	outputFormat = 'text',
+	normalAttributes = {}
 ) {
 	const { session, mcpLog, projectRoot } = context;
 	const logFn = mcpLog || consoleLog;
@@ -231,51 +272,64 @@ async function updateTaskById(
 		}
 	};
 
-	try {
-		report('info', `Updating single task ${taskId} with prompt: "${prompt}"`);
+	let updatedTask = null;
 
-		// --- Input Validations (Keep existing) ---
-		if (!Number.isInteger(taskId) || taskId <= 0)
-			throw new Error(
-				`Invalid task ID: ${taskId}. Task ID must be a positive integer.`
-			);
-		if (!prompt || typeof prompt !== 'string' || prompt.trim() === '')
-			throw new Error('Prompt cannot be empty.');
-		if (useResearch && !isApiKeySet('perplexity', session)) {
-			report(
-				'warn',
-				'Perplexity research requested but API key not set. Falling back.'
-			);
-			if (outputFormat === 'text')
-				console.log(
-					chalk.yellow('Perplexity AI not available. Falling back to main AI.')
-				);
-			useResearch = false;
+	// 1. Update normal attributes if provided
+	if (normalAttributes && Object.keys(normalAttributes).length > 0) {
+		try {
+			await updateTaskNormalAttributesById(tasksPath, taskId, normalAttributes);
+			report('info', `Updated normal attributes for task ${taskId}: ${JSON.stringify(normalAttributes)}`);
+		} catch (err) {
+			report('error', `Failed to update normal attributes for task ${taskId}: ${err.message}`);
+			throw err;
 		}
-		if (!fs.existsSync(tasksPath))
-			throw new Error(`Tasks file not found: ${tasksPath}`);
-		// --- End Input Validations ---
+	}
 
-		// --- Task Loading and Status Check (Keep existing) ---
-		const data = readJSON(tasksPath);
-		if (!data || !data.tasks)
-			throw new Error(`No valid tasks found in ${tasksPath}.`);
-		const taskIndex = data.tasks.findIndex((task) => task.id === taskId);
-		if (taskIndex === -1) throw new Error(`Task with ID ${taskId} not found.`);
-		const taskToUpdate = data.tasks[taskIndex];
-		if (taskToUpdate.status === 'done' || taskToUpdate.status === 'completed') {
-			report(
-				'warn',
-				`Task ${taskId} is already marked as done and cannot be updated`
-			);
+	// 2. If prompt is provided, run AI update logic
+	if (prompt && typeof prompt === 'string' && prompt.trim() !== '') {
+		try {
+			report('info', `Updating single task ${taskId} with prompt: "${prompt}"`);
 
-			// Only show warning box for text output (CLI)
-			if (outputFormat === 'text') {
-				console.log(
-					boxen(
-						chalk.yellow(
-							`Task ${taskId} is already marked as ${taskToUpdate.status} and cannot be updated.`
-						) +
+			// --- Input Validations (Keep existing) ---
+			if (!Number.isInteger(taskId) || taskId <= 0)
+				throw new Error(
+					`Invalid task ID: ${taskId}. Task ID must be a positive integer.`
+				);
+			if (useResearch && !isApiKeySet('perplexity', session)) {
+				report(
+					'warn',
+					'Perplexity research requested but API key not set. Falling back.'
+				);
+				if (outputFormat === 'text')
+					console.log(
+						chalk.yellow('Perplexity AI not available. Falling back to main AI.')
+					);
+				useResearch = false;
+			}
+			if (!fs.existsSync(tasksPath))
+				throw new Error(`Tasks file not found: ${tasksPath}`);
+			// --- End Input Validations ---
+
+			// --- Task Loading and Status Check (Keep existing) ---
+			const data = readJSON(tasksPath);
+			if (!data || !data.tasks)
+				throw new Error(`No valid tasks found in ${tasksPath}.`);
+			const taskIndex = data.tasks.findIndex((task) => task.id === taskId);
+			if (taskIndex === -1) throw new Error(`Task with ID ${taskId} not found.`);
+			const taskToUpdate = data.tasks[taskIndex];
+			if (taskToUpdate.status === 'done' || taskToUpdate.status === 'completed') {
+				report(
+					'warn',
+					`Task ${taskId} is already marked as done and cannot be updated`
+				);
+
+				// Only show warning box for text output (CLI)
+				if (outputFormat === 'text') {
+					console.log(
+						boxen(
+							chalk.yellow(
+								`Task ${taskId} is already marked as ${taskToUpdate.status} and cannot be updated.`
+							) +
 							'\n\n' +
 							chalk.white(
 								'Completed tasks are locked to maintain consistency. To modify a completed task, you must first:'
@@ -287,46 +341,46 @@ async function updateTaskById(
 							'\n' +
 							chalk.white('2. Then run the update-task command'),
 						{ padding: 1, borderColor: 'yellow', borderStyle: 'round' }
-					)
-				);
+						)
+					);
+				}
+				return null;
 			}
-			return null;
-		}
-		// --- End Task Loading ---
+			// --- End Task Loading ---
 
-		// --- Display Task Info (CLI Only - Keep existing) ---
-		if (outputFormat === 'text') {
-			// Show the task that will be updated
-			const table = new Table({
-				head: [
-					chalk.cyan.bold('ID'),
-					chalk.cyan.bold('Title'),
-					chalk.cyan.bold('Status')
-				],
-				colWidths: [5, 60, 10]
-			});
+			// --- Display Task Info (CLI Only - Keep existing) ---
+			if (outputFormat === 'text') {
+				// Show the task that will be updated
+				const table = new Table({
+					head: [
+						chalk.cyan.bold('ID'),
+						chalk.cyan.bold('Title'),
+						chalk.cyan.bold('Status')
+					],
+					colWidths: [5, 60, 10]
+				});
 
-			table.push([
-				taskToUpdate.id,
-				truncate(taskToUpdate.title, 57),
-				getStatusWithColor(taskToUpdate.status)
-			]);
+				table.push([
+					taskToUpdate.id,
+					truncate(taskToUpdate.title, 57),
+					getStatusWithColor(taskToUpdate.status)
+				]);
 
-			console.log(
-				boxen(chalk.white.bold(`Updating Task #${taskId}`), {
-					padding: 1,
-					borderColor: 'blue',
-					borderStyle: 'round',
-					margin: { top: 1, bottom: 0 }
-				})
-			);
+				console.log(
+					boxen(chalk.white.bold(`Updating Task #${taskId}`), {
+						padding: 1,
+						borderColor: 'blue',
+						borderStyle: 'round',
+						margin: { top: 1, bottom: 0 }
+					})
+				);
 
-			console.log(table.toString());
+				console.log(table.toString());
 
-			// Display a message about how completed subtasks are handled
-			console.log(
-				boxen(
-					chalk.cyan.bold('How Completed Subtasks Are Handled:') +
+				// Display a message about how completed subtasks are handled
+				console.log(
+					boxen(
+						chalk.cyan.bold('How Completed Subtasks Are Handled:') +
 						'\n\n' +
 						chalk.white(
 							'• Subtasks marked as "done" or "completed" will be preserved\n'
@@ -340,18 +394,18 @@ async function updateTaskById(
 						chalk.white(
 							'• This approach maintains a clear record of completed work and new requirements'
 						),
-					{
-						padding: 1,
-						borderColor: 'blue',
-						borderStyle: 'round',
-						margin: { top: 1, bottom: 1 }
-					}
-				)
-			);
-		}
+						{
+							padding: 1,
+							borderColor: 'blue',
+							borderStyle: 'round',
+							margin: { top: 1, bottom: 1 }
+						}
+					)
+				);
+			}
 
-		// --- Build Prompts (Keep EXACT original prompts) ---
-		const systemPrompt = `You are an AI assistant helping to update a software development task based on new context.
+			// --- Build Prompts (Keep EXACT original prompts) ---
+			const systemPrompt = `You are an AI assistant helping to update a software development task based on new context.
 You will be given a task and a prompt describing changes or new implementation details.
 Your job is to update the task to reflect these changes, while preserving its basic structure.
 
@@ -370,153 +424,100 @@ Guidelines:
 
 The changes described in the prompt should be thoughtfully applied to make the task more accurate and actionable.`;
 
-		const taskDataString = JSON.stringify(taskToUpdate, null, 2); // Use original task data
-		const userPrompt = `Here is the task to update:\n${taskDataString}\n\nPlease update this task based on the following new context:\n${prompt}\n\nIMPORTANT: In the task JSON above, any subtasks with "status": "done" or "status": "completed" should be preserved exactly as is. Build your changes around these completed items.\n\nReturn only the updated task as a valid JSON object.`;
-		// --- End Build Prompts ---
+			const taskDataString = JSON.stringify(taskToUpdate, null, 2); // Use original task data
+			const userPrompt = `Here is the task to update:\n${taskDataString}\n\nPlease update this task based on the following new context:\n${prompt}\n\nIMPORTANT: In the task JSON above, any subtasks with "status": "done" or "status": "completed" should be preserved exactly as is. Build your changes around these completed items.\n\nReturn only the updated task as a valid JSON object.`;
+			// --- End Build Prompts ---
 
-		let loadingIndicator = null;
-		let aiServiceResponse = null;
+			let loadingIndicator = null;
+			let aiServiceResponse = null;
 
-		if (!isMCP && outputFormat === 'text') {
-			loadingIndicator = startLoadingIndicator(
-				useResearch ? 'Updating task with research...\n' : 'Updating task...\n'
-			);
-		}
-
-		try {
-			const serviceRole = useResearch ? 'research' : 'main';
-			aiServiceResponse = await generateTextService({
-				role: serviceRole,
-				session: session,
-				projectRoot: projectRoot,
-				systemPrompt: systemPrompt,
-				prompt: userPrompt,
-				commandName: 'update-task',
-				outputType: isMCP ? 'mcp' : 'cli'
-			});
-
-			if (loadingIndicator)
-				stopLoadingIndicator(loadingIndicator, 'AI update complete.');
-
-			// Use mainResult (text) for parsing
-			const updatedTask = parseUpdatedTaskFromText(
-				aiServiceResponse.mainResult,
-				taskId,
-				logFn,
-				isMCP
-			);
-
-			// --- Task Validation/Correction (Keep existing logic) ---
-			if (!updatedTask || typeof updatedTask !== 'object')
-				throw new Error('Received invalid task object from AI.');
-			if (!updatedTask.title || !updatedTask.description)
-				throw new Error('Updated task missing required fields.');
-			// Preserve ID if AI changed it
-			if (updatedTask.id !== taskId) {
-				report('warn', `AI changed task ID. Restoring original ID ${taskId}.`);
-				updatedTask.id = taskId;
-			}
-			// Preserve status if AI changed it
-			if (
-				updatedTask.status !== taskToUpdate.status &&
-				!prompt.toLowerCase().includes('status')
-			) {
-				report(
-					'warn',
-					`AI changed task status. Restoring original status '${taskToUpdate.status}'.`
+			if (!isMCP && outputFormat === 'text') {
+				loadingIndicator = startLoadingIndicator(
+					useResearch ? 'Updating task with research...\n' : 'Updating task...\n'
 				);
-				updatedTask.status = taskToUpdate.status;
 			}
-			// Preserve completed subtasks (Keep existing logic)
-			if (taskToUpdate.subtasks?.length > 0) {
-				if (!updatedTask.subtasks) {
-					report(
-						'warn',
-						'Subtasks removed by AI. Restoring original subtasks.'
-					);
-					updatedTask.subtasks = taskToUpdate.subtasks;
-				} else {
-					const completedOriginal = taskToUpdate.subtasks.filter(
-						(st) => st.status === 'done' || st.status === 'completed'
-					);
-					completedOriginal.forEach((compSub) => {
-						const updatedSub = updatedTask.subtasks.find(
-							(st) => st.id === compSub.id
-						);
-						if (
-							!updatedSub ||
-							JSON.stringify(updatedSub) !== JSON.stringify(compSub)
-						) {
-							report(
-								'warn',
-								`Completed subtask ${compSub.id} was modified or removed. Restoring.`
-							);
-							// Remove potentially modified version
-							updatedTask.subtasks = updatedTask.subtasks.filter(
-								(st) => st.id !== compSub.id
-							);
-							// Add back original
-							updatedTask.subtasks.push(compSub);
-						}
-					});
-					// Deduplicate just in case
-					const subtaskIds = new Set();
-					updatedTask.subtasks = updatedTask.subtasks.filter((st) => {
-						if (!subtaskIds.has(st.id)) {
-							subtaskIds.add(st.id);
-							return true;
-						}
-						report('warn', `Duplicate subtask ID ${st.id} removed.`);
-						return false;
-					});
+
+			try {
+				const serviceRole = useResearch ? 'research' : 'main';
+				aiServiceResponse = await generateTextService({
+					role: serviceRole,
+					session: session,
+					projectRoot: projectRoot,
+					systemPrompt: systemPrompt,
+					prompt: userPrompt,
+					commandName: 'update-task',
+					outputType: isMCP ? 'mcp' : 'cli'
+				});
+
+				if (!aiServiceResponse || !aiServiceResponse.mainResult) {
+					throw new Error('AI service did not return a valid result.');
 				}
+
+				let updatedTaskObj = null;
+				try {
+					updatedTaskObj = JSON.parse(aiServiceResponse.mainResult);
+				} catch (parseErr) {
+					throw new Error('Failed to parse AI response as valid JSON.');
+				}
+
+				// Overwrite the task in the data
+				data.tasks[taskIndex] = updatedTaskObj;
+				writeJSON(tasksPath, data);
+				updatedTask = updatedTaskObj;
+
+				if (!isMCP && outputFormat === 'text' && loadingIndicator) {
+					stopLoadingIndicator(loadingIndicator);
+				}
+
+				if (outputFormat === 'text') {
+					console.log(
+						boxen(
+							chalk.green(`Successfully updated task #${taskId}`) +
+							'\n\n' +
+							chalk.white.bold('Title:') +
+							' ' +
+							updatedTaskObj.title,
+							{ padding: 1, borderColor: 'green', borderStyle: 'round' }
+						)
+					);
+				}
+
+				if (outputFormat === 'text' && aiServiceResponse.telemetryData) {
+					displayAiUsageSummary(aiServiceResponse.telemetryData, 'cli');
+				}
+
+				return {
+					updatedTask: updatedTaskObj,
+					telemetryData: aiServiceResponse.telemetryData
+				};
+			} catch (aiError) {
+				if (!isMCP && outputFormat === 'text' && loadingIndicator) {
+					stopLoadingIndicator(loadingIndicator);
+				}
+				report('error', `AI service call failed: ${aiError.message}`);
+				if (outputFormat === 'text') {
+					console.error(chalk.red(`Error: ${aiError.message}`));
+				}
+				throw aiError;
 			}
-			// --- End Task Validation/Correction ---
-
-			// --- Update Task Data (Keep existing) ---
-			data.tasks[taskIndex] = updatedTask;
-			// --- End Update Task Data ---
-
-			// --- Write File and Generate (Unchanged) ---
-			writeJSON(tasksPath, data);
-			report('success', `Successfully updated task ${taskId}`);
-			await generateTaskFiles(tasksPath, path.dirname(tasksPath));
-			// --- End Write File ---
-
-			// --- Display CLI Telemetry ---
-			if (outputFormat === 'text' && aiServiceResponse.telemetryData) {
-				displayAiUsageSummary(aiServiceResponse.telemetryData, 'cli'); // <<< ADD display
-			}
-
-			// --- Return Success with Telemetry ---
-			return {
-				updatedTask: updatedTask, // Return the updated task object
-				telemetryData: aiServiceResponse.telemetryData // <<< ADD telemetryData
-			};
 		} catch (error) {
-			// Catch errors from generateTextService
-			if (loadingIndicator) stopLoadingIndicator(loadingIndicator);
-			report('error', `Error during AI service call: ${error.message}`);
-			if (error.message.includes('API key')) {
-				report('error', 'Please ensure API keys are configured correctly.');
+			report('error', `Error updating task: ${error.message}`);
+			if (outputFormat === 'text') {
+				console.error(chalk.red(`Error: ${error.message}`));
 			}
-			throw error; // Re-throw error
+			throw error;
 		}
-	} catch (error) {
-		// General error catch
-		// --- General Error Handling (Keep existing) ---
-		report('error', `Error updating task: ${error.message}`);
-		if (outputFormat === 'text') {
-			console.error(chalk.red(`Error: ${error.message}`));
-			// ... helpful hints ...
-			if (getDebugFlag(session)) console.error(error);
-			process.exit(1);
-		} else {
-			throw error; // Re-throw for MCP
-		}
-		return null; // Indicate failure in CLI case if process doesn't exit
-		// --- End General Error Handling ---
 	}
+
+	// If only normal attributes were updated, return the updated task
+	if (!prompt && normalAttributes && Object.keys(normalAttributes).length > 0) {
+		// Reload and return the updated task
+		const data = readJSON(tasksPath);
+		const task = data.tasks.find((t) => t.id === taskId);
+		return { updatedTask: task };
+	}
+
+	return updatedTask;
 }
 
 export default updateTaskById;

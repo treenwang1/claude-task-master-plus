@@ -29,6 +29,7 @@ import {
 	analyzeTaskComplexity,
 	updateTaskById,
 	updateSubtaskById,
+	updateSubtaskNormalAttributeById,
 	removeTask,
 	findTaskById,
 	taskExists,
@@ -879,6 +880,14 @@ function registerCommands(programInstance) {
 			'-r, --research',
 			'Use Perplexity AI for research-backed task updates'
 		)
+		.option(
+			'--assignees <assignees>',
+			'Comma-separated list of people or teams to assign to the updated task'
+		)
+		.option(
+			'--executor <executor>',
+			'Who should execute the task: "agent" or "human"'
+		)
 		.action(async (options) => {
 			try {
 				const tasksPath = options.file || TASKMASTER_TASKS_FILE;
@@ -926,6 +935,29 @@ function registerCommands(programInstance) {
 
 				const prompt = options.prompt;
 				const useResearch = options.research || false;
+				
+				// Parse and validate assignees if provided
+				let assignees = null;
+				if (options.assignees) {
+					assignees = options.assignees
+						.split(',')
+						.map(assignee => assignee.trim())
+						.filter(assignee => assignee.length > 0);
+				}
+				
+				// Validate executor if provided
+				let executor = null;
+				if (options.executor) {
+					if (!['agent', 'human'].includes(options.executor)) {
+						console.error(
+							chalk.red(
+								`Error: Invalid executor "${options.executor}". Must be either "agent" or "human".`
+							)
+						);
+						process.exit(1);
+					}
+					executor = options.executor;
+				}
 
 				// Validate tasks file exists
 				if (!fs.existsSync(tasksPath)) {
@@ -952,39 +984,52 @@ function registerCommands(programInstance) {
 					chalk.blue(`Updating task ${taskId} with prompt: "${prompt}"`)
 				);
 				console.log(chalk.blue(`Tasks file: ${tasksPath}`));
-
-				if (useResearch) {
-					// Verify Perplexity API key exists if using research
-					if (!isApiKeySet('perplexity')) {
-						console.log(
-							chalk.yellow(
-								'Warning: PERPLEXITY_API_KEY environment variable is missing. Research-backed updates will not be available.'
-							)
-						);
-						console.log(
-							chalk.yellow('Falling back to Claude AI for task update.')
-						);
-					} else {
-						console.log(
-							chalk.blue('Using Perplexity AI for research-backed task update')
-						);
-					}
+				
+				if (assignees && assignees.length > 0) {
+					console.log(chalk.blue(`Assignees: ${assignees.join(', ')}`));
+					updateTaskNormalAttributeById(tasksPath, taskId, 'assignees', assignees);
+				}
+				
+				if (executor) {
+					console.log(chalk.blue(`Executor: ${executor}`));
+					updateTaskNormalAttributeById(tasksPath, taskId, 'executor', executor);
 				}
 
-				const result = await updateTaskById(
-					tasksPath,
-					taskId,
-					prompt,
-					useResearch
-				);
+				if (prompt) {
 
-				// If the task wasn't updated (e.g., if it was already marked as done)
-				if (!result) {
-					console.log(
-						chalk.yellow(
-							'\nTask update was not completed. Review the messages above for details.'
-						)
+					if (useResearch) {
+						// Verify Perplexity API key exists if using research
+						if (!isApiKeySet('perplexity')) {
+							console.log(
+								chalk.yellow(
+									'Warning: PERPLEXITY_API_KEY environment variable is missing. Research-backed updates will not be available.'
+								)
+							);
+							console.log(
+								chalk.yellow('Falling back to Claude AI for task update.')
+							);
+						} else {
+							console.log(
+								chalk.blue('Using Perplexity AI for research-backed task update')
+							);
+						}
+					}
+
+					const result = await updateTaskById(
+						tasksPath,
+						taskId,
+						prompt,
+						useResearch
 					);
+
+					// If the task wasn't updated (e.g., if it was already marked as done)
+					if (!result) {
+						console.log(
+							chalk.yellow(
+								'\nTask update was not completed. Review the messages above for details.'
+							)
+						);
+					}
 				}
 			} catch (error) {
 				console.error(chalk.red(`Error: ${error.message}`));
@@ -1036,6 +1081,14 @@ function registerCommands(programInstance) {
 			'Prompt explaining what information to add (required)'
 		)
 		.option('-r, --research', 'Use Perplexity AI for research-backed updates')
+		.option(
+			'--assignees <assignees>',
+			'Comma-separated list of people or teams to assign to the updated subtask'
+		)
+		.option(
+			'--executor <executor>',
+			'Who should execute the subtask: "agent" or "human"'
+		)
 		.action(async (options) => {
 			try {
 				const tasksPath = options.file || TASKMASTER_TASKS_FILE;
@@ -1083,6 +1136,29 @@ function registerCommands(programInstance) {
 
 				const prompt = options.prompt;
 				const useResearch = options.research || false;
+				
+				// Parse and validate assignees if provided
+				let assignees = null;
+				if (options.assignees) {
+					assignees = options.assignees
+						.split(',')
+						.map(assignee => assignee.trim())
+						.filter(assignee => assignee.length > 0);
+				}
+				
+				// Validate executor if provided
+				let executor = null;
+				if (options.executor) {
+					if (!['agent', 'human'].includes(options.executor)) {
+						console.error(
+							chalk.red(
+								`Error: Invalid executor "${options.executor}". Must be either "agent" or "human".`
+							)
+						);
+						process.exit(1);
+					}
+					executor = options.executor;
+				}
 
 				// Validate tasks file exists
 				if (!fs.existsSync(tasksPath)) {
@@ -1109,6 +1185,14 @@ function registerCommands(programInstance) {
 					chalk.blue(`Updating subtask ${subtaskId} with prompt: "${prompt}"`)
 				);
 				console.log(chalk.blue(`Tasks file: ${tasksPath}`));
+				
+				if (assignees && assignees.length > 0) {
+					console.log(chalk.blue(`Assignees: ${assignees.join(', ')}`));
+				}
+				
+				if (executor) {
+					console.log(chalk.blue(`Executor: ${executor}`));
+				}
 
 				if (useResearch) {
 					// Verify Perplexity API key exists if using research
@@ -1130,19 +1214,42 @@ function registerCommands(programInstance) {
 					}
 				}
 
-				const result = await updateSubtaskById(
-					tasksPath,
-					subtaskId,
-					prompt,
-					useResearch
-				);
+				// Update assignees if provided
+				if (assignees && assignees.length > 0) {
+					try {
+						await updateSubtaskNormalAttributeById(tasksPath, subtaskId, 'assignees', assignees);
+						console.log(chalk.green(`✓ Assignees updated successfully`));
+					} catch (error) {
+						console.error(chalk.red(`Error updating assignees: ${error.message}`));
+					}
+				}
 
-				if (!result) {
-					console.log(
-						chalk.yellow(
-							'\nSubtask update was not completed. Review the messages above for details.'
-						)
+				// Update executor if provided
+				if (executor) {
+					try {
+						await updateSubtaskNormalAttributeById(tasksPath, subtaskId, 'executor', executor);
+						console.log(chalk.green(`✓ Executor updated successfully`));
+					} catch (error) {
+						console.error(chalk.red(`Error updating executor: ${error.message}`));
+					}
+				}
+
+				if (prompt) {
+					const result = await updateSubtaskById(
+						tasksPath,
+						subtaskId,
+						prompt,
+						useResearch
 					);
+
+
+					if (!result) {
+						console.log(
+							chalk.yellow(
+								'\nSubtask update was not completed. Review the messages above for details.'
+							)
+						);
+					}
 				}
 			} catch (error) {
 				console.error(chalk.red(`Error: ${error.message}`));
@@ -2403,6 +2510,22 @@ function registerCommands(programInstance) {
 		.option('--skip-install', 'Skip installing dependencies')
 		.option('--dry-run', 'Show what would be done without making changes')
 		.option('--aliases', 'Add shell aliases (tm, taskmaster)')
+		.option(
+			'--ide <ide>',
+			'Target IDE for initialization (cursor, windsurf, roo, all)',
+			'all'
+		)
+		.addHelpText(
+			'after',
+			`
+Examples:
+  $ task-master init                                    # Initialize for all IDEs (default)
+  $ task-master init --ide cursor                       # Initialize only for Cursor IDE
+  $ task-master init --ide windsurf                     # Initialize only for Windsurf IDE
+  $ task-master init --ide roo                          # Initialize only for Roo IDE
+  $ task-master init --name "My Project" --ide cursor   # Initialize for Cursor with custom name
+  $ task-master init -y --ide windsurf                  # Quick init for Windsurf without prompts`
+		)
 		.action(async (cmdOptions) => {
 			// cmdOptions contains parsed arguments
 			try {
