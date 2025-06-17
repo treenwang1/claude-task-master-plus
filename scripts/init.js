@@ -36,7 +36,8 @@ import {
 	getTaskGroupTasksDir,
 	getTaskGroupDocsDir,
 	getTaskGroupReportsDir,
-	getTaskGroupTemplatesDir
+	getTaskGroupTemplatesDir,
+	getTaskGroupTasksFile
 } from '../src/constants/paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -530,6 +531,9 @@ function createProjectStructure(addAliases, dryRun, options) {
 		// Setup MCP configuration for integration with Cursor
 		setupMCPConfiguration(targetDir);
 	}
+
+	// create tasks.json in the default tasks directory
+	fs.writeFileSync(path.join(targetDir, getTaskGroupTasksFile(DEFAULT_TASK_GROUP)), '{"tasks": []}');
 
 	// Copy template files with replacements
 	const replacements = {

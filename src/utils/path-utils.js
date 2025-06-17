@@ -35,9 +35,9 @@ function getConfigManager() {
  * @param {string|null} projectRoot - Project root directory
  * @returns {string} The working task group name
  */
-async function getWorkingTaskGroup(projectRoot = null) {
+export function getWorkingTaskGroup(projectRoot = null) {
 	try {
-		const config = await getConfigManager();
+		const config = getConfigManager();
 		return config.getWorkingTaskGroup(projectRoot);
 	} catch (error) {
 		// Fallback to default if config is not available
@@ -146,7 +146,7 @@ export async function findTasksPath(explicitPath = null, args = null, log = null
 	}
 
 	// 4. Get working task group and check task group-specific path first
-	const taskGroup = await getWorkingTaskGroup(projectRoot);
+	const taskGroup = getWorkingTaskGroup(projectRoot);
 	const taskGroupTasksFile = path.join(projectRoot, getTaskGroupTasksFile(taskGroup));
 	
 	// 5. Check possible locations in order of preference

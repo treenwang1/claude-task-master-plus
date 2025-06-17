@@ -290,7 +290,7 @@ function readComplexityReport(customPath = null) {
 			reportPath = customPath;
 		} else {
 			// Try new location first, then fall back to legacy
-			const newPath = path.join(process.cwd(), COMPLEXITY_REPORT_FILE);
+			const newPath = getTaskGroupComplexityReportFile(getWorkingTaskGroup());
 			const legacyPath = path.join(
 				process.cwd(),
 				LEGACY_COMPLEXITY_REPORT_FILE

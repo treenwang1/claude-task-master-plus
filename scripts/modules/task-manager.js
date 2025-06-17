@@ -16,7 +16,7 @@ import expandAllTasks from './task-manager/expand-all-tasks.js';
 import clearSubtasks from './task-manager/clear-subtasks.js';
 import addTask from './task-manager/add-task.js';
 import analyzeTaskComplexity from './task-manager/analyze-task-complexity.js';
-import findNextTask from './task-manager/find-next-task.js';
+import findNextTask, { findNextTaskFromRootPath } from './task-manager/find-next-task.js';
 import addSubtask from './task-manager/add-subtask.js';
 import removeSubtask from './task-manager/remove-subtask.js';
 import updateSubtaskById, { updateSubtaskNormalAttributeById, updateSubtaskNormalAttributesById } from './task-manager/update-subtask-by-id.js';
@@ -45,6 +45,7 @@ export {
 	addSubtask,
 	removeSubtask,
 	findNextTask,
+	findNextTaskFromRootPath,
 	analyzeTaskComplexity,
 	removeTask,
 	findTaskById,

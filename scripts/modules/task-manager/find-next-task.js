@@ -1,6 +1,24 @@
-import { log } from '../utils.js';
-import { addComplexityToTask } from '../utils.js';
-
+import { addComplexityToTask, readJSON, readComplexityReport } from '../utils.js';
+import { getTaskGroupTasksFile, getTaskGroupComplexityReportFile } from '../../../src/constants/paths.js';
+import { getWorkingTaskGroup, findProjectRoot } from '../../../src/utils/path-utils.js';
+import path from 'path'
+/**
+ * Return the next work item from the root path
+ * @param {string} rootPath - The root path of the project
+ * @returns {Object|null}   – next work item or null if nothing is eligible
+ */
+function findNextTaskFromRootPath(rootPath = null) {
+	
+	rootPath = rootPath || findProjectRoot();
+	const tasksPath = path.join(rootPath, getTaskGroupTasksFile(getWorkingTaskGroup(rootPath)));
+	const data = readJSON(tasksPath); // Reads the whole tasks.json
+	if (!data || !data.tasks) {
+		throw new Error(`No valid tasks found in ${tasksPath}`); // TODO: Handle this better
+	}
+	const complexityReportFile = getTaskGroupComplexityReportFile(getWorkingTaskGroup(rootPath));
+	const complexityReport = readComplexityReport(complexityReportFile);
+	return findNextTask(data.tasks, complexityReport);
+}
 /**
  * Return the next work item:
  *   •  Prefer an eligible SUBTASK that belongs to any parent task
@@ -146,3 +164,4 @@ function findNextTask(tasks, complexityReport = null) {
 }
 
 export default findNextTask;
+export { findNextTaskFromRootPath }
