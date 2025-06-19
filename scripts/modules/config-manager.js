@@ -3,7 +3,7 @@ import path from 'path';
 import chalk from 'chalk';
 import { fileURLToPath } from 'url';
 import { log, findProjectRoot, resolveEnvVariable } from './utils.js';
-import { LEGACY_CONFIG_FILE } from '../../src/constants/paths.js';
+import { LEGACY_CONFIG_FILE, setDefaultTaskGroup } from '../../src/constants/paths.js';
 import { findConfigPath } from '../../src/utils/path-utils.js';
 import { 
 	DEFAULT_TASK_GROUP,
@@ -792,8 +792,8 @@ function setWorkingTaskGroup(taskGroupName, explicitRoot = null) {
 	}
 	
 	config.global.workingTaskGroup = taskGroupName;
-	
 	const success = writeConfig(config, explicitRoot);
+	setDefaultTaskGroup(taskGroupName); // Update the default task group as working task group
 	if (success) {
 		console.log(chalk.green(`✓ Working task group set to: ${taskGroupName}`));
 	}

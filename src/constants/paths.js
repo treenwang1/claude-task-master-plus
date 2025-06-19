@@ -46,28 +46,23 @@ export function getTaskGroupExamplePrdFile(taskGroupName) {
 // Task Master configuration files
 export const TASKMASTER_CONFIG_FILE = '.taskmaster/config.json';
 export const LEGACY_CONFIG_FILE = '.taskmasterconfig';
-
-export let DEFAULT_TASK_GROUP = 'default';
-if (fs.existsSync(TASKMASTER_CONFIG_FILE)) {
-	DEFAULT_TASK_GROUP = JSON.parse(fs.readFileSync(TASKMASTER_CONFIG_FILE))?.global?.workingTaskGroup ?? DEFAULT_TASK_GROUP;
-}
-
 // Task Master report files (legacy paths for backwards compatibility)
-export const COMPLEXITY_REPORT_FILE =
-	`.taskmaster/${DEFAULT_TASK_GROUP}/reports/task-complexity-report.json`;
+export let COMPLEXITY_REPORT_FILE;
 export const LEGACY_COMPLEXITY_REPORT_FILE =
 	'scripts/task-complexity-report.json';
 
 // Task Master PRD file paths (legacy paths for backwards compatibility)
-export const PRD_FILE = `.taskmaster/${DEFAULT_TASK_GROUP}/docs/prd.txt`;
+export let PRD_FILE;
 export const LEGACY_PRD_FILE = 'scripts/prd.txt';
 
+export let TASKMASTER_DOCS_DIR;
+
 // Task Master template files (legacy paths for backwards compatibility)
-export const EXAMPLE_PRD_FILE = `.taskmaster/${DEFAULT_TASK_GROUP}/templates/example_prd.txt`;
+export let EXAMPLE_PRD_FILE;
 export const LEGACY_EXAMPLE_PRD_FILE = 'scripts/example_prd.txt';
 
 // Task Master task file paths (legacy paths for backwards compatibility)
-export const TASKMASTER_TASKS_FILE = `.taskmaster/${DEFAULT_TASK_GROUP}/tasks/tasks.json`;
+export let TASKMASTER_TASKS_FILE;
 export const LEGACY_TASKS_FILE = 'tasks/tasks.json';
 
 // General project files (not Task Master specific but commonly used)
@@ -78,6 +73,22 @@ export const GITIGNORE_FILE = '.gitignore';
 export const TASK_FILE_PREFIX = 'task_';
 export const TASK_FILE_EXTENSION = '.txt';
 
+export let DEFAULT_TASK_GROUP = 'default';
+if (fs.existsSync(TASKMASTER_CONFIG_FILE)) {
+	DEFAULT_TASK_GROUP = JSON.parse(fs.readFileSync(TASKMASTER_CONFIG_FILE))?.global?.workingTaskGroup ?? DEFAULT_TASK_GROUP;
+}
+
+setDefaultTaskGroup(DEFAULT_TASK_GROUP);
+
+
+export function setDefaultTaskGroup(taskGroupName) {
+	DEFAULT_TASK_GROUP = taskGroupName;
+	COMPLEXITY_REPORT_FILE = `.taskmaster/${DEFAULT_TASK_GROUP}/reports/task-complexity-report.json`;
+	PRD_FILE = `.taskmaster/${DEFAULT_TASK_GROUP}/docs/prd.txt`;
+	EXAMPLE_PRD_FILE = `.taskmaster/${DEFAULT_TASK_GROUP}/templates/example_prd.txt`;
+	TASKMASTER_TASKS_FILE = `.taskmaster/${DEFAULT_TASK_GROUP}/tasks/tasks.json`;
+	TASKMASTER_DOCS_DIR = `.taskmaster/${DEFAULT_TASK_GROUP}/docs`;
+}
 /**
  * Project markers used to identify a task-master project root
  * These files/directories indicate that a directory is a Task Master project

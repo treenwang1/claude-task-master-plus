@@ -29,7 +29,7 @@ export function registerParsePRDTool(server) {
 				.string()
 				.optional()
 				.default(PRD_FILE)
-				.describe('Absolute path to the PRD document file (.txt, .md, etc.)'),
+				.describe(`Absolute path to the PRD document file (prd.txt, prd.md, etc. default: ${PRD_FILE})`),
 			projectRoot: z
 				.string()
 				.describe('The directory of the project. Must be an absolute path.'),
