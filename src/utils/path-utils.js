@@ -16,34 +16,12 @@ import {
 	getTaskGroupDocsDir,
 	getTaskGroupReportsDir,
 	getTaskGroupComplexityReportFile,
-	getTaskGroupPrdFile
+	getTaskGroupPrdFile,
+	getWorkingTaskGroup
 } from '../constants/paths.js';
 import { getLoggerOrDefault } from './logger-utils.js';
-
-// Import config manager with lazy loading to avoid circular dependencies
-let configManager = null;
-function getConfigManager() {
-	if (!configManager) {
-		// Lazy import to avoid circular dependency
-		configManager = import('../../scripts/modules/config-manager.js');
-	}
-	return configManager;
-}
-
-/**
- * Gets the working task group from configuration, with fallback to default
- * @param {string|null} projectRoot - Project root directory
- * @returns {string} The working task group name
- */
-export function getWorkingTaskGroup(projectRoot = null) {
-	try {
-		const config = getConfigManager();
-		return config.getWorkingTaskGroup(projectRoot);
-	} catch (error) {
-		// Fallback to default if config is not available
-		return DEFAULT_TASK_GROUP;
-	}
-}
+import dotenv from 'dotenv';
+import chalk from 'chalk';
 
 /**
  * Normalize project root to ensure it doesn't end with .taskmaster
@@ -231,7 +209,7 @@ export async function findPRDPath(explicitPath = null, args = null, log = null) 
 	const projectRoot = normalizeProjectRoot(rawProjectRoot);
 
 	// 4. Get working task group
-	const taskGroup = await getWorkingTaskGroup(projectRoot);
+	const taskGroup = getWorkingTaskGroup(projectRoot);
 	
 	// 5. Check possible locations in order of preference
 	const locations = [
@@ -307,12 +285,12 @@ export async function findComplexityReportPath(
 	const projectRoot = normalizeProjectRoot(rawProjectRoot);
 
 	// 4. Get working task group
-	const taskGroup = await getWorkingTaskGroup(projectRoot);
+	const taskGroup = getWorkingTaskGroup(projectRoot);
 
 	// 5. Check possible locations in order of preference
 	const locations = [
 		getTaskGroupReportsDir(taskGroup), // .taskmaster/{taskgroup}/reports/ (NEW with task groups)
-		TASKMASTER_REPORTS_DIR, // .taskmaster/reports/ (LEGACY)
+		'', // .taskmaster/reports/ (LEGACY)
 		'scripts/', // Legacy location
 		'' // Project root
 	];
@@ -373,7 +351,7 @@ export async function resolveTasksOutputPath(
 	const projectRoot = normalizeProjectRoot(rawProjectRoot);
 
 	// 4. Get working task group and use task group-specific path
-	const taskGroup = await getWorkingTaskGroup(projectRoot);
+	const taskGroup = getWorkingTaskGroup(projectRoot);
 	const defaultPath = path.join(projectRoot, getTaskGroupTasksFile(taskGroup));
 	
 	logger.info?.(`Using task group '${taskGroup}' output path: ${defaultPath}`);
@@ -422,7 +400,7 @@ export async function resolveComplexityReportOutputPath(
 	const projectRoot = normalizeProjectRoot(rawProjectRoot);
 
 	// 4. Get working task group and use task group-specific path
-	const taskGroup = await getWorkingTaskGroup(projectRoot);
+	const taskGroup = getWorkingTaskGroup(projectRoot);
 	const defaultPath = path.join(projectRoot, getTaskGroupComplexityReportFile(taskGroup));
 	
 	logger.info?.(`Using task group '${taskGroup}' complexity report output path: ${defaultPath}`);
@@ -495,4 +473,50 @@ export function findConfigPath(explicitPath = null, args = null, log = null) {
 
 	logger.warn?.(`No configuration file found in project: ${projectRoot}`);
 	return null;
+}// --- Environment Variable Resolution Utility ---
+/**
+ * Resolves an environment variable's value.
+ * Precedence:
+ * 1. session.env (if session provided)
+ * 2. process.env
+ * 3. .env file at projectRoot (if projectRoot provided)
+ * @param {string} key - The environment variable key.
+ * @param {object|null} [session=null] - The MCP session object.
+ * @param {string|null} [projectRoot=null] - The project root directory (for .env fallback).
+ * @returns {string|undefined} The value of the environment variable or undefined if not found.
+ */
+export function resolveEnvVariable(key, session = null, projectRoot = null) {
+	// 1. Check session.env
+	if (session?.env?.[key]) {
+		return session.env[key];
+	}
+
+	// 2. Read .env file at projectRoot
+	if (projectRoot) {
+		const envPath = path.join(projectRoot, '.env');
+		if (fs.existsSync(envPath)) {
+			try {
+				const envFileContent = fs.readFileSync(envPath, 'utf-8');
+				const parsedEnv = dotenv.parse(envFileContent); // Use dotenv to parse
+				if (parsedEnv && parsedEnv[key]) {
+					// console.log(`DEBUG: Found key ${key} in ${envPath}`); // Optional debug log
+					return parsedEnv[key];
+				}
+			} catch (error) {
+				// Log error but don't crash, just proceed as if key wasn't found in file
+				console.warn(
+					chalk.yellow(`Could not read or parse ${envPath}: ${error.message}`)
+				);
+			}
+		}
+	}
+
+	// 3. Fallback: Check process.env
+	if (process.env[key]) {
+		return process.env[key];
+	}
+
+	// Not found anywhere
+	return undefined;
 }
+

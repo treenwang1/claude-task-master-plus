@@ -243,7 +243,7 @@ describe('Task ${taskId}: ${taskTitle}', () => {
 
 ### File System Operations Implementation
 ```javascript
-import fs from 'fs';
+import * as fs from 'fs';
 import path from 'path';
 
 // Determine output path
@@ -314,7 +314,7 @@ if (mockRequirements && mockRequirements.length > 0) {
 
 ### Required Dependencies
 ```javascript
-import fs from 'fs';
+import * as fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
 import { log } from '../utils.js';

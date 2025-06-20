@@ -114,6 +114,7 @@ describe('updateTasks', () => {
 				title: 'Updated Task 2',
 				status: 'pending',
 				details: 'New details 2 based on direction',
+				executor: 'agent',
 				description: 'Updated description',
 				dependencies: [],
 				priority: 'medium'
@@ -123,6 +124,7 @@ describe('updateTasks', () => {
 				title: 'Updated Task 3',
 				status: 'pending',
 				details: 'New details 3 based on direction',
+				executor: 'agent',
 				description: 'Updated description',
 				dependencies: [],
 				priority: 'medium'

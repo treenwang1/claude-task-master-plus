@@ -54,7 +54,7 @@ jest.mock('../../scripts/modules/utils.js', () => ({
 // 3. Import modules AFTER all mocks are defined
 import { functionToTest } from '../../scripts/modules/module-name.js';
 import { testFixture } from '../fixtures/fixture-name.js';
-import fs from 'fs';
+import * as fs from 'fs';
 
 // 4. Set up spies on mocked modules (if needed)
 const mockReadFileSync = jest.spyOn(fs, 'readFileSync');
@@ -234,7 +234,7 @@ When testing CLI commands built with Commander.js, several special consideration
   jest.mock('fs');
   
   // Import the mocked module
-  import fs from 'fs';
+  import * as fs from 'fs';
   
   // Create spies on the mock functions
   const mockExistsSync = jest.spyOn(fs, 'existsSync').mockReturnValue(true);

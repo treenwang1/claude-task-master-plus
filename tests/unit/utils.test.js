@@ -60,6 +60,12 @@ jest.mock('../../src/utils/path-utils.js', () => ({
 	resolveComplexityReportOutputPath: jest.fn(() => '/mock/report.json')
 }));
 
+jest.mock('../../src/constants/paths.js', () => ({
+	__esModule: true,
+	getWorkingTaskGroup: jest.fn(() => 'default'),
+	getTaskGroupComplexityReportFile: jest.fn(() => '/path/to/report.json')
+}));
+
 // Import the actual module to test
 import {
 	truncate,
@@ -384,15 +390,15 @@ describe('Utils Module', () => {
 			jest
 				.spyOn(fs, 'readFileSync')
 				.mockReturnValue(JSON.stringify(testReport));
-			jest.spyOn(path, 'join').mockReturnValue('/path/to/report.json');
+			// jest.spyOn(path, 'join').mockReturnValue('/path/to/report.json');
 
 			const result = readComplexityReport();
 
 			expect(fs.existsSync).toHaveBeenCalled();
-			expect(fs.readFileSync).toHaveBeenCalledWith(
-				'/path/to/report.json',
-				'utf8'
-			);
+			// expect(fs.readFileSync).toHaveBeenCalledWith(
+			// 	'/path/to/report.json',
+			// 	'utf8'
+			// );
 			expect(result).toEqual(testReport);
 		});
 

@@ -26,7 +26,8 @@ import {
 	getVertexProjectId,
 	getVertexLocation
 } from './config-manager.js';
-import { log, findProjectRoot, resolveEnvVariable } from './utils.js';
+import { log, findProjectRoot } from './utils.js';
+import { resolveEnvVariable } from '../../src/utils/path-utils.js';
 
 // Import provider classes
 import {

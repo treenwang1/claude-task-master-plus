@@ -4,7 +4,7 @@
  * This file uses ES module syntax (.mjs) to properly handle imports
  */
 
-import fs from 'fs';
+import * as fs from 'fs';
 import path from 'path';
 import { jest } from '@jest/globals';
 import { fileURLToPath } from 'url';

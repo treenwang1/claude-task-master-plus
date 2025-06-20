@@ -2,6 +2,8 @@
  * Path constants for Task Master application
  */
 import fs from 'fs';
+import path from 'path';
+import { findProjectRoot } from '../utils/path-utils.js';
 // .taskmaster directory structure paths
 export const TASKMASTER_DIR = '.taskmaster';
 
@@ -101,4 +103,15 @@ export const PROJECT_MARKERS = [
 	TASKMASTER_TASKS_FILE, // .taskmaster/tasks/tasks.json (new location)
 	'.git', // Git repository
 	'.svn' // SVN repository
-];
+];/**
+ * The same as the function in config-manager.js, but used for current file only to avoid circular dependency.
+ * Gets the working task group from configuration.
+ * @param {string|null} explicitRoot - Optional explicit path to the project root.
+ * @returns {string} The working task group name (defaults to 'default').
+ */
+export function getWorkingTaskGroup(explicitRoot = null) {
+	const projectRoot = findProjectRoot(explicitRoot);
+	const config = JSON.parse(fs.readFileSync(path.join(projectRoot, TASKMASTER_CONFIG_FILE), 'utf-8'));
+	return config.global?.workingTaskGroup || DEFAULT_TASK_GROUP;
+}
+

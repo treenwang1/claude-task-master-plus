@@ -162,13 +162,10 @@ const { default: analyzeTaskComplexity } = await import(
 describe('analyzeTaskComplexity', () => {
 	// Sample response structure (simplified for these tests)
 	const sampleApiResponse = {
-		mainResult: JSON.stringify({
-			tasks: [
-				{ id: 1, complexity: 3, subtaskCount: 2 },
-				{ id: 2, complexity: 7, subtaskCount: 5 },
-				{ id: 3, complexity: 9, subtaskCount: 8 }
-			]
-		}),
+		mainResult: JSON.stringify([
+			{ taskId: 1, taskTitle: 'Task 1', complexityScore: 3, recommendedSubtasks: 2, expansionPrompt: 'Break down authentication', reasoning: 'Simple task' },
+			{ taskId: 2, taskTitle: 'Task 2', complexityScore: 7, recommendedSubtasks: 5, expansionPrompt: 'Break down database', reasoning: 'Complex task' }
+		]),
 		telemetryData: {
 			timestamp: new Date().toISOString(),
 			userId: '1234567890',
@@ -209,9 +206,34 @@ describe('analyzeTaskComplexity', () => {
 				status: 'done',
 				dependencies: [1, 2],
 				priority: 'high'
+			},
+			{
+				id: 4,
+				title: 'Task 4',
+				description: 'Fourth task description',
+				status: 'blocked',
+				dependencies: [],
+				priority: 'low'
+			},
+			{
+				id: 5,
+				title: 'Task 5',
+				description: 'Fifth task description',
+				status: 'in-progress',
+				dependencies: [1],
+				priority: 'high'
 			}
 		]
 	};
+
+	// Create a helper function for consistent mcpLog mock
+	const createMcpLogMock = () => ({
+		info: jest.fn(),
+		warn: jest.fn(),
+		error: jest.fn(),
+		debug: jest.fn(),
+		success: jest.fn()
+	});
 
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -219,6 +241,13 @@ describe('analyzeTaskComplexity', () => {
 		// Default mock implementations
 		readJSON.mockReturnValue(JSON.parse(JSON.stringify(sampleTasks)));
 		generateTextService.mockResolvedValue(sampleApiResponse);
+
+		// Mock console.log to avoid output during tests
+		jest.spyOn(console, 'log').mockImplementation(() => {});
+	});
+
+	afterEach(() => {
+		console.log.mockRestore();
 	});
 
 	test('should call generateTextService with the correct parameters', async () => {
@@ -229,21 +258,21 @@ describe('analyzeTaskComplexity', () => {
 			threshold: '5',
 			research: false
 		};
+		const mcpLog = createMcpLogMock();
 
 		// Act
-		await analyzeTaskComplexity(options, {
-			mcpLog: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn(),
-				success: jest.fn()
-			}
-		});
+		const result = await analyzeTaskComplexity(options, { mcpLog });
 
 		// Assert
 		expect(readJSON).toHaveBeenCalledWith('tasks/tasks.json');
-		expect(generateTextService).toHaveBeenCalledWith(expect.any(Object));
+		expect(generateTextService).toHaveBeenCalledWith(
+			expect.objectContaining({
+				role: 'main',
+				prompt: expect.stringContaining('Analyze the following tasks'),
+				commandName: 'analyze-complexity',
+				outputType: 'mcp'
+			})
+		);
 		expect(writeJSON).toHaveBeenCalledWith(
 			'scripts/task-complexity-report.json',
 			expect.objectContaining({
@@ -252,6 +281,13 @@ describe('analyzeTaskComplexity', () => {
 					projectName: 'Test Project'
 				}),
 				complexityAnalysis: expect.any(Array)
+			})
+		);
+		
+		// Should return telemetry data
+		expect(result).toEqual(
+			expect.objectContaining({
+				telemetryData: sampleApiResponse.telemetryData
 			})
 		);
 	});
@@ -264,22 +300,15 @@ describe('analyzeTaskComplexity', () => {
 			threshold: '5',
 			research: true
 		};
+		const mcpLog = createMcpLogMock();
 
 		// Act
-		await analyzeTaskComplexity(researchOptions, {
-			mcpLog: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn(),
-				success: jest.fn()
-			}
-		});
+		await analyzeTaskComplexity(researchOptions, { mcpLog });
 
 		// Assert
 		expect(generateTextService).toHaveBeenCalledWith(
 			expect.objectContaining({
-				role: 'research' // This should be present when research is true
+				role: 'research'
 			})
 		);
 	});
@@ -291,16 +320,9 @@ describe('analyzeTaskComplexity', () => {
 			output: 'scripts/task-complexity-report.json',
 			threshold: '7'
 		};
+		const mcpLog = createMcpLogMock();
 
-		await analyzeTaskComplexity(options, {
-			mcpLog: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn(),
-				success: jest.fn()
-			}
-		});
+		await analyzeTaskComplexity(options, { mcpLog });
 
 		expect(writeJSON).toHaveBeenCalledWith(
 			'scripts/task-complexity-report.json',
@@ -313,6 +335,8 @@ describe('analyzeTaskComplexity', () => {
 
 		// Reset mocks
 		jest.clearAllMocks();
+		readJSON.mockReturnValue(JSON.parse(JSON.stringify(sampleTasks)));
+		generateTextService.mockResolvedValue(sampleApiResponse);
 
 		// Test with number threshold
 		options = {
@@ -321,15 +345,7 @@ describe('analyzeTaskComplexity', () => {
 			threshold: 8
 		};
 
-		await analyzeTaskComplexity(options, {
-			mcpLog: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn(),
-				success: jest.fn()
-			}
-		});
+		await analyzeTaskComplexity(options, { mcpLog });
 
 		expect(writeJSON).toHaveBeenCalledWith(
 			'scripts/task-complexity-report.json',
@@ -348,25 +364,99 @@ describe('analyzeTaskComplexity', () => {
 			output: 'scripts/task-complexity-report.json',
 			threshold: '5'
 		};
+		const mcpLog = createMcpLogMock();
 
 		// Act
-		await analyzeTaskComplexity(options, {
-			mcpLog: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn(),
-				success: jest.fn()
-			}
-		});
+		await analyzeTaskComplexity(options, { mcpLog });
 
 		// Assert
-		// Check if the prompt sent to AI doesn't include the completed task (id: 3)
-		expect(generateTextService).toHaveBeenCalledWith(
-			expect.objectContaining({
-				prompt: expect.not.stringContaining('"id": 3')
-			})
-		);
+		// Check that only active tasks (pending, blocked, in-progress) are included
+		const callArgs = generateTextService.mock.calls[0][0];
+		expect(callArgs.prompt).not.toContain('"id": 3'); // 'done' task should be filtered out
+		expect(callArgs.prompt).toContain('"id": 1'); // 'pending' task should be included
+		expect(callArgs.prompt).toContain('"id": 2'); // 'pending' task should be included
+		expect(callArgs.prompt).toContain('"id": 4'); // 'blocked' task should be included
+		expect(callArgs.prompt).toContain('"id": 5'); // 'in-progress' task should be included
+	});
+
+	test('should filter tasks by specific IDs when provided', async () => {
+		// Arrange
+		const options = {
+			file: 'tasks/tasks.json',
+			output: 'scripts/task-complexity-report.json',
+			threshold: '5',
+			id: '1,2'
+		};
+		const mcpLog = createMcpLogMock();
+
+		// Act
+		await analyzeTaskComplexity(options, { mcpLog });
+
+		// Assert
+		const callArgs = generateTextService.mock.calls[0][0];
+		expect(callArgs.prompt).toContain('"id": 1');
+		expect(callArgs.prompt).toContain('"id": 2');
+		expect(callArgs.prompt).not.toContain('"id": 4');
+		expect(callArgs.prompt).not.toContain('"id": 5');
+	});
+
+	test('should filter tasks by ID range when provided', async () => {
+		// Arrange
+		const options = {
+			file: 'tasks/tasks.json',
+			output: 'scripts/task-complexity-report.json',
+			threshold: '5',
+			from: 2,
+			to: 4
+		};
+		const mcpLog = createMcpLogMock();
+
+		// Act
+		await analyzeTaskComplexity(options, { mcpLog });
+
+		// Assert
+		const callArgs = generateTextService.mock.calls[0][0];
+		expect(callArgs.prompt).not.toContain('"id": 1'); // Below range
+		expect(callArgs.prompt).toContain('"id": 2'); // In range
+		expect(callArgs.prompt).toContain('"id": 4'); // In range
+		expect(callArgs.prompt).not.toContain('"id": 5'); // Above range
+	});
+
+	test('should handle empty task list gracefully', async () => {
+		// Arrange
+		const emptyTasks = { meta: { projectName: 'Test Project' }, tasks: [] };
+		readJSON.mockReturnValue(emptyTasks);
+		
+		const options = {
+			file: 'tasks/tasks.json',
+			output: 'scripts/task-complexity-report.json',
+			threshold: '5'
+		};
+		const mcpLog = createMcpLogMock();
+
+		// Act & Assert
+		await expect(analyzeTaskComplexity(options, { mcpLog }))
+			.rejects.toThrow('No tasks found in the tasks file');
+	});
+
+	test('should handle invalid JSON response from AI', async () => {
+		// Arrange
+		const invalidApiResponse = {
+			...sampleApiResponse,
+			mainResult: 'invalid json'
+		};
+		generateTextService.mockResolvedValue(invalidApiResponse);
+		
+		const options = {
+			file: 'tasks/tasks.json',
+			output: 'scripts/task-complexity-report.json',
+			threshold: '5'
+		};
+		const mcpLog = createMcpLogMock();
+
+		// Act & Assert
+		await expect(analyzeTaskComplexity(options, { mcpLog }))
+			.rejects.toThrow();
 	});
 
 	test('should handle API errors gracefully', async () => {
@@ -380,13 +470,7 @@ describe('analyzeTaskComplexity', () => {
 		// Force API error
 		generateTextService.mockRejectedValueOnce(new Error('API Error'));
 
-		const mockMcpLog = {
-			info: jest.fn(),
-			warn: jest.fn(),
-			error: jest.fn(),
-			debug: jest.fn(),
-			success: jest.fn()
-		};
+		const mockMcpLog = createMcpLogMock();
 
 		// Act & Assert
 		await expect(
@@ -399,5 +483,115 @@ describe('analyzeTaskComplexity', () => {
 		expect(mockMcpLog.error).toHaveBeenCalledWith(
 			expect.stringContaining('API Error')
 		);
+	});
+
+	test('should use default file paths when not specified', async () => {
+		// Arrange
+		const options = {
+			threshold: '5'
+		};
+		const mcpLog = createMcpLogMock();
+
+		// Act
+		await analyzeTaskComplexity(options, { mcpLog });
+
+		// Assert
+		expect(readJSON).toHaveBeenCalledWith('tasks/tasks.json'); // LEGACY_TASKS_FILE
+		expect(writeJSON).toHaveBeenCalledWith(
+			expect.stringContaining('task-complexity-report.json'), // COMPLEXITY_REPORT_FILE
+			expect.any(Object)
+		);
+	});
+
+	test('should handle CLI output format correctly', async () => {
+		// Arrange
+		const options = {
+			file: 'tasks/tasks.json',
+			output: 'scripts/task-complexity-report.json',
+			threshold: '5'
+		};
+
+		// Act without mcpLog (CLI mode)
+		const result = await analyzeTaskComplexity(options, {});
+
+		// Assert
+		expect(generateTextService).toHaveBeenCalledWith(
+			expect.objectContaining({
+				outputType: 'cli'
+			})
+		);
+		expect(result).toEqual(
+			expect.objectContaining({
+				telemetryData: sampleApiResponse.telemetryData
+			})
+		);
+	});
+
+	test('should handle missing project name in metadata', async () => {
+		// Arrange
+		const tasksWithoutProjectName = {
+			meta: {}, // No projectName
+			tasks: sampleTasks.tasks
+		};
+		readJSON.mockReturnValue(tasksWithoutProjectName);
+
+		const options = {
+			file: 'tasks/tasks.json',
+			output: 'scripts/task-complexity-report.json',
+			threshold: '5'
+		};
+		const mcpLog = createMcpLogMock();
+
+		// Act
+		await analyzeTaskComplexity(options, { mcpLog });
+
+		// Assert
+		expect(writeJSON).toHaveBeenCalledWith(
+			'scripts/task-complexity-report.json',
+			expect.objectContaining({
+				meta: expect.objectContaining({
+					projectName: expect.any(String) // Should have a fallback value
+				})
+			})
+		);
+	});
+
+	test('should handle task filtering with no matching active tasks', async () => {
+		// Arrange
+		const tasksAllCompleted = {
+			meta: { projectName: 'Test Project' },
+			tasks: [
+				{ id: 1, title: 'Task 1', status: 'done' },
+				{ id: 2, title: 'Task 2', status: 'cancelled' }
+			]
+		};
+		readJSON.mockReturnValue(tasksAllCompleted);
+
+		const options = {
+			file: 'tasks/tasks.json',
+			output: 'scripts/task-complexity-report.json',
+			threshold: '5'
+		};
+		const mcpLog = createMcpLogMock();
+
+		// Act
+		const result = await analyzeTaskComplexity(options, { mcpLog });
+
+		// Assert - should handle gracefully even with no active tasks
+		expect(result).toEqual(
+			expect.objectContaining({
+				report: expect.objectContaining({
+					meta: expect.objectContaining({
+						projectName: 'Test Project',
+						tasksAnalyzed: 0
+					}),
+					complexityAnalysis: []
+				}),
+				telemetryData: null // No AI call made when no active tasks
+			})
+		);
+
+		// Verify that generateTextService was not called since no active tasks
+		expect(generateTextService).not.toHaveBeenCalled();
 	});
 });

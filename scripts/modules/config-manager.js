@@ -2,16 +2,16 @@ import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
 import { fileURLToPath } from 'url';
-import { log, findProjectRoot, resolveEnvVariable } from './utils.js';
-import { LEGACY_CONFIG_FILE, setDefaultTaskGroup } from '../../src/constants/paths.js';
-import { findConfigPath } from '../../src/utils/path-utils.js';
+import { findConfigPath, findProjectRoot, resolveEnvVariable } from '../../src/utils/path-utils.js';
 import { 
 	DEFAULT_TASK_GROUP,
+	LEGACY_CONFIG_FILE,
 	getTaskGroupPath,
 	getTaskGroupTasksDir,
 	getTaskGroupDocsDir,
 	getTaskGroupReportsDir,
-	getTaskGroupTemplatesDir
+	getTaskGroupTemplatesDir,
+	setDefaultTaskGroup
 } from '../../src/constants/paths.js';
 
 // Calculate __dirname in ESM
@@ -216,7 +216,7 @@ function _loadAndValidateConfig(explicitRoot = null) {
  * @param {boolean} forceReload - Force reloading the config file.
  * @returns {object} The loaded configuration object.
  */
-function getConfig(explicitRoot = null, forceReload = false) {
+function getConfig(explicitRoot = null, forceReload = true) {
 	// Determine if a reload is necessary
 	const needsLoad =
 		!loadedConfig ||
@@ -275,9 +275,8 @@ function getModelConfigForRole(role, explicitRoot = null) {
 	const config = getConfig(explicitRoot);
 	const roleConfig = config?.models?.[role];
 	if (!roleConfig) {
-		log(
-			'warn',
-			`No model configuration found for role: ${role}. Returning default.`
+		console.warn(
+			chalk.yellow(`Warning: No model configuration found for role: ${role}. Returning default.`)
 		);
 		return DEFAULTS.models[role] || {};
 	}
@@ -447,26 +446,22 @@ function getParametersForRole(role, explicitRoot = null) {
 				const modelSpecificMaxTokens = modelDefinition.max_tokens;
 				// Use the minimum of the role default and the model specific limit
 				effectiveMaxTokens = Math.min(roleMaxTokens, modelSpecificMaxTokens);
-				log(
-					'debug',
-					`Applying model-specific max_tokens (${modelSpecificMaxTokens}) for ${modelId}. Effective limit: ${effectiveMaxTokens}`
+				console.log(
+					chalk.gray(`Applying model-specific max_tokens (${modelSpecificMaxTokens}) for ${modelId}. Effective limit: ${effectiveMaxTokens}`)
 				);
 			} else {
-				log(
-					'debug',
-					`No valid model-specific max_tokens override found for ${modelId}. Using role default: ${roleMaxTokens}`
+				console.log(
+					chalk.gray(`No valid model-specific max_tokens override found for ${modelId}. Using role default: ${roleMaxTokens}`)
 				);
 			}
 		} else {
-			log(
-				'debug',
-				`No model definitions found for provider ${providerName} in MODEL_MAP. Using role default maxTokens: ${roleMaxTokens}`
+			console.log(
+				chalk.gray(`No model definitions found for provider ${providerName} in MODEL_MAP. Using role default maxTokens: ${roleMaxTokens}`)
 			);
 		}
 	} catch (lookupError) {
-		log(
-			'warn',
-			`Error looking up model-specific max_tokens for ${modelId}: ${lookupError.message}. Using role default: ${roleMaxTokens}`
+		console.warn(
+			chalk.yellow(`Error looking up model-specific max_tokens for ${modelId}: ${lookupError.message}. Using role default: ${roleMaxTokens}`)
 		);
 		// Fallback to role default on error
 		effectiveMaxTokens = roleMaxTokens;
@@ -507,7 +502,9 @@ function isApiKeySet(providerName, session = null, projectRoot = null) {
 
 	const providerKey = providerName?.toLowerCase();
 	if (!providerKey || !keyMap[providerKey]) {
-		log('warn', `Unknown provider name: ${providerName} in isApiKeySet check.`);
+		console.warn(
+			chalk.yellow(`Warning: Unknown provider name: ${providerName} in isApiKeySet check.`)
+		);
 		return false;
 	}
 
@@ -734,9 +731,8 @@ function getUserId(explicitRoot = null) {
 		if (!success) {
 			// Log an error or handle the failure to write,
 			// though for now, we'll proceed with the in-memory default.
-			log(
-				'warning',
-				'Failed to write updated configuration with new userId. Please let the developers know.'
+			console.warn(
+				chalk.yellow('Failed to write updated configuration with new userId. Please let the developers know.')
 			);
 		}
 	}
