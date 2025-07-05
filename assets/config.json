@@ -23,6 +23,7 @@
 		"logLevel": "info",
 		"debug": false,
 		"defaultSubtasks": 5,
+		"currentGroup": "default",
 		"defaultPriority": "medium",
 		"projectName": "Taskmaster",
 		"ollamaBaseURL": "http://localhost:11434/api",

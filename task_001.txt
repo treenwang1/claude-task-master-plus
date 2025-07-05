@@ -1,0 +1,11 @@
+# Task ID: 1
+# Title: Task 1
+# Status: pending
+# Dependencies: None
+# Priority: medium
+# Description: First task
+# Details:
+Task 1 details
+
+# Test Strategy:
+Test task 1

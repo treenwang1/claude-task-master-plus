@@ -158,6 +158,8 @@ describe('addTask', () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
 		readJSON.mockReturnValue(JSON.parse(JSON.stringify(sampleTasks)));
+		// Reset writeJSON to its default mock implementation
+		writeJSON.mockImplementation(() => {});
 
 		// Mock console.log to avoid output during tests
 		jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -400,5 +402,428 @@ describe('addTask', () => {
 		await expect(
 			addTask('tasks/tasks.json', prompt, [], 'medium', context, 'json')
 		).rejects.toThrow('File write failed');
+	});
+
+	// New tests for manual task data and positioning functionality
+	describe('Manual Task Data', () => {
+		test('should use manual task data when provided', async () => {
+			// Arrange
+			const prompt = 'Create a new authentication system';
+			const manualTaskData = {
+				title: 'Custom Title',
+				description: 'Custom Description',
+				assignees: ['user1', 'user2'],
+				executor: 'human',
+				priority: 'high'
+			};
+			const context = { mcpLog: createMcpLogMock() };
+
+			// Act
+			const result = await addTask(
+				'tasks/tasks.json',
+				prompt,
+				[], // dependencies
+				null, // priority (should use manual data)
+				context,
+				'json',
+				manualTaskData,
+				false // useResearch
+			);
+
+			// Assert
+			expect(writeJSON).toHaveBeenCalledWith(
+				'tasks/tasks.json',
+				expect.objectContaining({
+					tasks: expect.arrayContaining([
+						expect.objectContaining({
+							id: 4,
+							title: 'Custom Title',
+							description: 'Custom Description',
+							assignees: ['user1', 'user2'],
+							executor: 'human',
+							// Note: priority comes from manualTaskData when parameter priority is null
+							priority: 'high'
+						})
+					])
+				})
+			);
+		});
+
+		test('should use default values when manual task data is missing fields', async () => {
+			// Arrange
+			const prompt = 'Create a new authentication system';
+			const manualTaskData = {
+				title: 'Custom Title',
+				description: 'Custom Description'
+				// Missing other fields
+			};
+			const context = { mcpLog: createMcpLogMock() };
+
+			// Act
+			await addTask(
+				'tasks/tasks.json',
+				prompt,
+				[],
+				'medium',
+				context,
+				'json',
+				manualTaskData,
+				false
+			);
+
+			// Assert
+			expect(writeJSON).toHaveBeenCalledWith(
+				'tasks/tasks.json',
+				expect.objectContaining({
+					tasks: expect.arrayContaining([
+						expect.objectContaining({
+							title: 'Custom Title',
+							assignees: [],
+							executor: 'agent'
+						})
+					])
+				})
+			);
+		});
+	});
+
+	describe('Task ID Positioning', () => {
+		test('should insert task at specific position when taskId is provided', async () => {
+			// Arrange
+			const prompt = 'New Task';
+			const manualTaskData = {
+				title: 'Inserted Task',
+				description: 'Task inserted at position 2',
+				id: 2 // Insert at position 2
+			};
+			const context = { mcpLog: createMcpLogMock() };
+
+			// Act
+			const result = await addTask(
+				'tasks/tasks.json',
+				prompt,
+				[],
+				'medium',
+				context,
+				'json',
+				manualTaskData,
+				false
+			);
+
+			// Assert
+			expect(result.newTaskId).toBe(2);
+			expect(writeJSON).toHaveBeenCalledWith(
+				'tasks/tasks.json',
+				expect.objectContaining({
+					tasks: expect.arrayContaining([
+						expect.objectContaining({ id: 1, title: 'Task 1' }), // Unchanged
+						expect.objectContaining({ id: 2, title: 'Inserted Task' }), // New task
+						expect.objectContaining({ id: 3, title: 'Task 2' }), // Shifted from 2 to 3
+						expect.objectContaining({ id: 4, title: 'Task 3' }) // Shifted from 3 to 4
+					])
+				})
+			);
+		});
+
+		test('should append to end when taskId is not provided', async () => {
+			// Arrange
+			const prompt = 'New Task';
+			const manualTaskData = {
+				title: 'Appended Task',
+				description: 'Task appended to end'
+				// No taskId
+			};
+			const context = { mcpLog: createMcpLogMock() };
+
+			// Act
+			const result = await addTask(
+				'tasks/tasks.json',
+				prompt,
+				[],
+				'medium',
+				context,
+				'json',
+				manualTaskData,
+				false
+			);
+
+			// Assert
+			expect(result.newTaskId).toBe(4);
+			expect(writeJSON).toHaveBeenCalledWith(
+				'tasks/tasks.json',
+				expect.objectContaining({
+					tasks: expect.arrayContaining([
+						expect.objectContaining({ id: 1, title: 'Task 1' }),
+						expect.objectContaining({ id: 2, title: 'Task 2' }),
+						expect.objectContaining({ id: 3, title: 'Task 3' }),
+						expect.objectContaining({ id: 4, title: 'Appended Task' })
+					])
+				})
+			);
+		});
+
+		test('should handle inserting at position 1', async () => {
+			// Arrange
+			const prompt = 'First Task';
+			const manualTaskData = {
+				title: 'New First Task',
+				description: 'Task inserted at position 1',
+				id: 1
+			};
+			const context = { mcpLog: createMcpLogMock() };
+
+			// Act
+			const result = await addTask(
+				'tasks/tasks.json',
+				prompt,
+				[],
+				'medium',
+				context,
+				'json',
+				manualTaskData,
+				false
+			);
+
+			// Assert
+			expect(result.newTaskId).toBe(1);
+			expect(writeJSON).toHaveBeenCalledWith(
+				'tasks/tasks.json',
+				expect.objectContaining({
+					tasks: expect.arrayContaining([
+						expect.objectContaining({ id: 1, title: 'New First Task' }),
+						expect.objectContaining({ id: 2, title: 'Task 1' }), // Shifted
+						expect.objectContaining({ id: 3, title: 'Task 2' }), // Shifted
+						expect.objectContaining({ id: 4, title: 'Task 3' }) // Shifted
+					])
+				})
+			);
+		});
+
+		test('should handle inserting beyond existing tasks', async () => {
+			// Arrange
+			const prompt = 'Future Task';
+			const manualTaskData = {
+				title: 'Task at Position 10',
+				description: 'Task inserted beyond existing tasks',
+				id: 10 // Beyond current tasks
+			};
+			const context = { mcpLog: createMcpLogMock() };
+
+			// Act
+			const result = await addTask(
+				'tasks/tasks.json',
+				prompt,
+				[],
+				'medium',
+				context,
+				'json',
+				manualTaskData,
+				false
+			);
+
+			// Assert
+			expect(result.newTaskId).toBe(10); // Should use the specified taskId even if beyond existing tasks
+		});
+	});
+
+	describe('Dependency Updating', () => {
+		test('should update dependencies when task IDs shift', async () => {
+			// Arrange - Task 3 depends on Task 1 originally
+			const tasksWithDependencies = {
+				tasks: [
+					{ id: 1, title: 'Task 1', dependencies: [] },
+					{ id: 2, title: 'Task 2', dependencies: [] },
+					{ id: 3, title: 'Task 3', dependencies: [1, 2] }, // Depends on 1 and 2
+					{ id: 4, title: 'Task 4', dependencies: [3] } // Depends on 3
+				]
+			};
+			readJSON.mockReturnValue(tasksWithDependencies);
+
+			const prompt = 'Inserted Task';
+			const manualTaskData = {
+				title: 'Inserted at Position 2',
+				description: 'Task that will shift other tasks',
+				id: 2 // Insert at position 2, shifting everything >= 2
+			};
+			const context = { mcpLog: createMcpLogMock() };
+
+			// Act
+			await addTask(
+				'tasks/tasks.json',
+				prompt,
+				[],
+				'medium',
+				context,
+				'json',
+				manualTaskData,
+				false
+			);
+
+			// Assert - Dependencies should be updated
+			expect(writeJSON).toHaveBeenCalledWith(
+				'tasks/tasks.json',
+				expect.objectContaining({
+					tasks: expect.arrayContaining([
+						expect.objectContaining({ id: 1, dependencies: [] }), // Unchanged
+						expect.objectContaining({ id: 2, title: 'Inserted at Position 2' }), // New task
+						expect.objectContaining({ id: 3, title: 'Task 2', dependencies: [] }), // Shifted, no deps to update
+						expect.objectContaining({ id: 4, title: 'Task 3', dependencies: [1, 3] }), // Updated: 2 -> 3
+						expect.objectContaining({ id: 5, title: 'Task 4', dependencies: [4] }) // Updated: 3 -> 4
+					])
+				})
+			);
+		});
+
+		test('should handle subtask dependencies during ID shifting', async () => {
+			// Arrange
+			const tasksWithSubtasks = {
+				tasks: [
+					{ id: 1, title: 'Task 1', dependencies: [] },
+					{ 
+						id: 2, 
+						title: 'Task 2', 
+						dependencies: [],
+						subtasks: [
+							{ id: 1, title: 'Subtask 2.1', dependencies: [1] }, // Depends on Task 1
+							{ id: 2, title: 'Subtask 2.2', dependencies: [2.1] } // Depends on Subtask 2.1
+						]
+					},
+					{ id: 3, title: 'Task 3', dependencies: [2] } // Depends on Task 2
+				]
+			};
+			readJSON.mockReturnValue(tasksWithSubtasks);
+
+			const prompt = 'Inserted Task';
+			const manualTaskData = {
+				title: 'Inserted at Position 2',
+				description: 'Task with subtask dependency handling',
+				id: 2 // This will shift Task 2 to Task 3
+			};
+			const context = { mcpLog: createMcpLogMock() };
+
+			// Act
+			await addTask(
+				'tasks/tasks.json',
+				prompt,
+				[],
+				'medium',
+				context,
+				'json',
+				manualTaskData,
+				false
+			);
+
+			// Assert
+			expect(writeJSON).toHaveBeenCalledWith(
+				'tasks/tasks.json',
+				expect.objectContaining({
+					tasks: expect.arrayContaining([
+						expect.objectContaining({ id: 1, title: 'Task 1' }),
+						expect.objectContaining({ id: 2, title: 'Inserted at Position 2' }),
+						expect.objectContaining({ 
+							id: 3, 
+							title: 'Task 2',
+							subtasks: expect.arrayContaining([
+								expect.objectContaining({ 
+									id: 1, 
+									title: 'Subtask 2.1', 
+									dependencies: [1] // Task dependency unchanged (1 < 2)
+								}),
+								expect.objectContaining({ 
+									id: 2, 
+									title: 'Subtask 2.2', 
+									dependencies: [3.1] // Subtask dependency updated (2.1 -> 3.1)
+								})
+							])
+						}),
+						expect.objectContaining({ 
+							id: 4, 
+							title: 'Task 3', 
+							dependencies: [3] // Updated: 2 -> 3
+						})
+					])
+				})
+			);
+		});
+	});
+
+	describe('Updated Function Signature', () => {
+		test('should work with new function signature parameters', async () => {
+			// Arrange
+			const prompt = 'New Task';
+			const dependencies = [1, 2];
+			const priority = 'high';
+			const context = { mcpLog: createMcpLogMock() };
+			const manualTaskData = {
+				title: 'Manual Task',
+				description: 'Manual task description',
+				assignees: ['user1'],
+				executor: 'human',
+				priority: 'medium'
+			};
+			const useResearch = false;
+
+			// Act
+			const result = await addTask(
+				'tasks/tasks.json',
+				prompt,
+				dependencies,
+				priority,
+				context,
+				'json',
+				manualTaskData,
+				useResearch
+			);
+
+			// Assert
+			expect(result).toHaveProperty('newTaskId');
+			expect(result).toHaveProperty('telemetryData');
+			expect(writeJSON).toHaveBeenCalledWith(
+				'tasks/tasks.json',
+				expect.objectContaining({
+					tasks: expect.arrayContaining([
+						expect.objectContaining({
+							title: 'Manual Task',
+							dependencies: dependencies,
+							priority: priority,
+							assignees: ['user1'],
+							executor: 'human'
+						})
+					])
+				})
+			);
+		});
+
+		test('should handle null manualTaskData gracefully', async () => {
+			// Arrange
+			const prompt = 'New Task';
+			const context = { mcpLog: createMcpLogMock() };
+
+			// Act
+			const result = await addTask(
+				'tasks/tasks.json',
+				prompt,
+				[],
+				'medium',
+				context,
+				'json',
+				null, // manualTaskData is null
+				false
+			);
+
+			// Assert
+			expect(result.newTaskId).toBe(4);
+			expect(writeJSON).toHaveBeenCalledWith(
+				'tasks/tasks.json',
+				expect.objectContaining({
+					tasks: expect.arrayContaining([
+						expect.objectContaining({
+							assignees: [], // Should use default
+							executor: 'agent' // Should use default
+						})
+					])
+				})
+			);
+		});
 	});
 });

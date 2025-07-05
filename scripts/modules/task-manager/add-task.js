@@ -14,7 +14,7 @@ import {
 	failLoadingIndicator,
 	displayAiUsageSummary
 } from '../ui.js';
-import { readJSON, writeJSON, log as consoleLog, truncate } from '../utils.js';
+import { readJSON, writeJSON, log as consoleLog, truncate, shiftTaskIds } from '../utils.js';
 import { generateObjectService } from '../ai-services-unified.js';
 import { getDefaultPriority } from '../config-manager.js';
 import generateTaskFiles from './generate-task-files.js';
@@ -59,13 +59,18 @@ const AiTaskDataSchema = z.object({
  * @param {string} outputFormat - Output format (text or json)
  * @param {Object} customEnv - Custom environment variables (optional) - Note: AI params override deprecated
  * @param {Object} manualTaskData - Manual task data (optional, for direct task creation without AI)
+ * @param {string} [manualTaskData.title] - Manual task title
+ * @param {string} [manualTaskData.description] - Manual task description
+ * @param {string} [manualTaskData.details] - Manual task details
+ * @param {string} [manualTaskData.testStrategy] - Manual task test strategy
+ * @param {Array<string>} [manualTaskData.assignees] - Array of people or teams assigned to this task
+ * @param {string} [manualTaskData.executor] - Who should execute this task: "agent" or "human" (defaults to "agent")
+ * @param {number|null} [manualTaskData.id] - Position where to insert the new task (null means add to end, existing tasks at/after this ID will be shifted to id+1)
  * @param {boolean} useResearch - Whether to use the research model (passed to unified service)
  * @param {Object} context - Context object containing session and potentially projectRoot
  * @param {string} [context.projectRoot] - Project root path (for MCP/env fallback)
  * @param {string} [context.commandName] - The name of the command being executed (for telemetry)
  * @param {string} [context.outputType] - The output type ('cli' or 'mcp', for telemetry)
- * @param {Array<string>} assignees - Array of people or teams assigned to this task (optional)
- * @param {string} executor - Who should execute this task: "agent" or "human" (optional, defaults to "agent")
  * @returns {Promise<object>} An object containing newTaskId and telemetryData
  */
 async function addTask(
@@ -76,12 +81,16 @@ async function addTask(
 	context = {},
 	outputFormat = 'text', // Default to text for CLI
 	manualTaskData = null,
-	useResearch = false,
-	assignees = [],
-	executor = 'agent'
+	useResearch = false
 ) {
 	const { session, mcpLog, projectRoot, commandName, outputType } = context;
 	const isMCP = !!mcpLog;
+
+	// Extract assignees, executor, and id from manualTaskData, with defaults
+	const assignees = manualTaskData?.assignees || [];
+	const executor = manualTaskData?.executor || 'agent';
+	const insertAtTaskId = manualTaskData?.id ?? null; // Position where to insert the task (null means add to end)
+	priority = priority || manualTaskData?.priority;
 
 	// Create a consistent logFn object regardless of context
 	const logFn = isMCP
@@ -112,6 +121,8 @@ async function addTask(
 			consoleLog(level, message);
 		}
 	};
+
+
 
 	/**
 	 * Recursively builds a dependency graph for a given task
@@ -190,10 +201,34 @@ async function addTask(
 			report('Created new tasks.json file with empty tasks array.', 'info');
 		}
 
-		// Find the highest task ID to determine the next ID
-		const highestId =
-			data.tasks.length > 0 ? Math.max(...data.tasks.map((t) => t.id)) : 0;
-		const newTaskId = highestId + 1;
+		// Determine the new task ID and handle insertion logic
+		let newTaskId;
+		let shouldShiftIds = false;
+		
+		if (insertAtTaskId !== null && insertAtTaskId !== undefined) {
+			// Insert at specific position
+			const insertPosition = parseInt(insertAtTaskId, 10);
+			
+			if (isNaN(insertPosition) || insertPosition < 1) {
+				throw new Error('taskId must be a positive integer');
+			}
+			
+			// Check if there's already a task at this position
+			const existingTask = data.tasks.find(t => t.id === insertPosition);
+			
+			if (existingTask) {
+				// Need to shift existing tasks
+				report(`Inserting new task at position ${insertPosition}, shifting existing tasks...`, 'info');
+				data.tasks = shiftTaskIds(data.tasks, insertPosition);
+				shouldShiftIds = true;
+			}
+			
+			newTaskId = insertPosition;
+		} else {
+			// Add to end (default behavior)
+			const highestId = data.tasks.length > 0 ? Math.max(...data.tasks.map((t) => t.id)) : 0;
+			newTaskId = highestId + 1;
+		}
 
 		// Only show UI box for CLI mode
 		if (outputFormat === 'text') {
@@ -207,7 +242,7 @@ async function addTask(
 			);
 		}
 
-		// Validate dependencies before proceeding
+		// Validate dependencies before proceeding (after potential ID shifting)
 		const invalidDeps = dependencies.filter((depId) => {
 			// Ensure depId is parsed as a number for comparison
 			const numDepId = parseInt(depId, 10);
@@ -224,8 +259,17 @@ async function addTask(
 				(depId) => !invalidDeps.includes(depId)
 			);
 		}
-		// Ensure dependencies are numbers
-		const numericDependencies = dependencies.map((dep) => parseInt(dep, 10));
+		
+		// Ensure dependencies are numbers and update them if IDs were shifted
+		let numericDependencies = dependencies.map((dep) => parseInt(dep, 10));
+		
+		if (shouldShiftIds && insertAtTaskId !== null) {
+			// Update dependency references to account for shifted IDs
+			numericDependencies = numericDependencies.map(depId => {
+				return depId >= insertAtTaskId ? depId + 1 : depId;
+			});
+			report(`Updated dependencies after ID shifting: [${numericDependencies.join(', ')}]`, 'debug');
+		}
 
 		// Build dependency graphs for explicitly specified dependencies
 		const dependencyGraphs = [];
@@ -983,7 +1027,7 @@ async function addTask(
 				: numericDependencies, // Use AI-suggested dependencies if available, fallback to manually specified
 			priority: effectivePriority,
 			subtasks: [], // Initialize with empty subtasks array
-			assignees: assignees,
+			assignees: taskData.assignees || assignees, // Use AI-suggested assignees if available, fallback to manual/default assignees
 			executor: taskData.executor || executor // Use AI-suggested executor if available, fallback to provided executor
 		};
 
@@ -1006,8 +1050,22 @@ async function addTask(
 			}
 		}
 
-		// Add the task to the tasks array
-		data.tasks.push(newTask);
+		// Insert the task at the correct position in the tasks array
+		if (insertAtTaskId !== null && insertAtTaskId !== undefined) {
+			// Insert at specific position - find the correct index
+			const insertIndex = data.tasks.findIndex(t => t.id > newTaskId);
+			if (insertIndex === -1) {
+				// New task ID is higher than all existing task IDs, add to end
+				data.tasks.push(newTask);
+			} else {
+				// Insert at the found position
+				data.tasks.splice(insertIndex, 0, newTask);
+			}
+			report(`Inserted task ${newTaskId} at position ${insertIndex === -1 ? data.tasks.length : insertIndex}`, 'debug');
+		} else {
+			// Add to end (default behavior)
+			data.tasks.push(newTask);
+		}
 
 		report('DEBUG: Writing tasks.json...', 'debug');
 		// Write the updated tasks to the file
@@ -1120,6 +1178,16 @@ async function addTask(
 				}
 			}
 
+			// Add insertion position info to dependency analysis
+			let insertionInfo = '';
+			if (insertAtTaskId !== null && insertAtTaskId !== undefined) {
+				insertionInfo = '\n' + chalk.white.bold('Insertion Details:') + '\n';
+				insertionInfo += chalk.cyan(`Task inserted at position ${newTaskId}`) + '\n';
+				if (shouldShiftIds) {
+					insertionInfo += chalk.yellow(`Existing tasks from ID ${insertAtTaskId} onwards were shifted to new IDs`) + '\n';
+				}
+			}
+
 			// Show success message box
 			console.log(
 				boxen(
@@ -1135,6 +1203,7 @@ async function addTask(
 						'\n\n' +
 						dependencyDisplay +
 						dependencyAnalysis +
+						insertionInfo +
 						'\n' +
 						chalk.white.bold('Next Steps:') +
 						'\n' +

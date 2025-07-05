@@ -1620,6 +1620,10 @@ function registerCommands(programInstance) {
 			'agent'
 		)
 		.option(
+			'--id <id>',
+			'Insert the new task at this specific position (existing tasks will be shifted). If not provided, adds to the end.'
+		)
+		.option(
 			'-r, --research',
 			'Whether to use research capabilities for task creation'
 		)
@@ -1658,19 +1662,34 @@ function registerCommands(programInstance) {
 			// Correctly determine projectRoot
 			const projectRoot = findProjectRoot();
 
+			// Parse assignees from comma-separated string (do this before manualTaskData creation)
+			const assigneesArray = options.assignees
+				? options.assignees.split(',').map((assignee) => assignee.trim()).filter(Boolean)
+				: [];
+
 			let manualTaskData = null;
 			if (isManualCreation) {
 				manualTaskData = {
 					title: options.title,
 					description: options.description,
 					details: options.details || '',
-					testStrategy: options.testStrategy || ''
+					testStrategy: options.testStrategy || '',
+					assignees: assigneesArray,
+					executor: options.executor,
+					id: options.id ? parseInt(options.id, 10) : null
 				};
 				// Restore specific logging for manual creation
 				console.log(
 					chalk.blue(`Creating task manually with title: "${options.title}"`)
 				);
 			} else {
+				// For AI creation, we still pass assignees and executor through manualTaskData
+				// even when using AI, as these are user-specified preferences
+				manualTaskData = {
+					assignees: assigneesArray,
+					executor: options.executor,
+					id: options.id ? parseInt(options.id, 10) : null
+				};
 				// Restore specific logging for AI creation
 				console.log(
 					chalk.blue(`Creating task with AI using prompt: "${options.prompt}"`)
@@ -1690,10 +1709,6 @@ function registerCommands(programInstance) {
 				console.log(chalk.blue(`Priority: ${options.priority}`));
 			}
 
-			// Parse assignees from comma-separated string
-			const assigneesArray = options.assignees
-				? options.assignees.split(',').map((assignee) => assignee.trim()).filter(Boolean)
-				: [];
 			if (assigneesArray.length > 0) {
 				console.log(
 					chalk.blue(`Assignees: [${assigneesArray.join(', ')}]`)
@@ -1720,9 +1735,7 @@ function registerCommands(programInstance) {
 					context,
 					'text',
 					manualTaskData,
-					options.research,
-					assigneesArray,
-					options.executor
+					options.research
 				);
 
 				// addTask handles detailed CLI success logging AND telemetry display when outputFormat is 'text'

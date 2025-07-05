@@ -59,6 +59,10 @@ export function registerAddTaskTool(server) {
 				.string()
 				.optional()
 				.describe('Who should execute this task: "agent" or "human" (default: agent)'),
+			id: z
+				.number()
+				.optional()
+				.describe('Insert the new task at this specific position (existing tasks will be shifted). If not provided, adds to the end.'),
 			file: z
 				.string()
 				.optional()
@@ -102,6 +106,7 @@ export function registerAddTaskTool(server) {
 						priority: args.priority,
 						assignees: args.assignees,
 						executor: args.executor,
+						id: args.id,
 						research: args.research,
 						projectRoot: args.projectRoot
 					},

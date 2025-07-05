@@ -297,6 +297,13 @@ async function removeDependency(tasksPath, taskId, dependencyId) {
 		return depStr === normalizedDependencyId;
 	});
 
+	// also check if the dependency is a task in the task's subtasks
+	if(dependencyIndex === -1) {
+		dependencyIndex = targetTask.dependencies.findIndex((dep) => {
+			return String(dep) === normalizedDependencyId;
+		});
+	}
+
 	if (dependencyIndex === -1) {
 		log(
 			'info',

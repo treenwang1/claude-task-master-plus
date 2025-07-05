@@ -618,6 +618,176 @@ function aggregateTelemetry(telemetryArray, overallCommandName) {
 	return aggregated;
 }
 
+/**
+ * Updates task IDs and all references when inserting a task at a specific position
+ * @param {Array} tasks - Array of all tasks
+ * @param {number} insertPosition - The position where the new task will be inserted
+ * @returns {Array} Updated tasks array with shifted IDs
+ */
+function shiftTaskIds(tasks, insertPosition) {
+	// First pass: update task IDs and subtask IDs
+	const updatedTasks = tasks.map(task => {
+		const updatedTask = { ...task };
+		
+		// Shift main task ID if it's at or after the insert position
+		if (task.id >= insertPosition) {
+			updatedTask.id = task.id + 1;
+		}
+		
+		// Shift subtask IDs if they exist
+		if (task.subtasks && task.subtasks.length > 0) {
+			updatedTask.subtasks = task.subtasks.map(subtask => ({
+				...subtask,
+				// Subtask IDs don't change, only parent task ID affects them
+			}));
+		}
+		
+		return updatedTask;
+	});
+	
+	// Second pass: update dependency references
+	const finalTasks = updatedTasks.map(task => {
+		const updatedTask = { ...task };
+		
+		// Update dependencies to point to new task IDs
+		if (task.dependencies && task.dependencies.length > 0) {
+			updatedTask.dependencies = task.dependencies.map(depId => {
+				// If the dependency task ID was shifted, update the reference
+				return depId >= insertPosition ? depId + 1 : depId;
+			});
+		}
+		
+		// Update subtask dependencies
+		if (task.subtasks && task.subtasks.length > 0) {
+			updatedTask.subtasks = task.subtasks.map(subtask => {
+				const updatedSubtask = { ...subtask };
+				
+				// Update subtask dependencies to point to new task IDs
+				if (subtask.dependencies && subtask.dependencies.length > 0) {
+					updatedSubtask.dependencies = subtask.dependencies.map(depId => {
+						// Check if it's a task dependency (whole number) or subtask dependency (decimal)
+						if (Number.isInteger(depId)) {
+							// Task dependency - shift if needed
+							return depId >= insertPosition ? depId + 1 : depId;
+						} else {
+							// Subtask dependency (e.g., 1.2) - check parent task ID
+							const [parentId, subtaskIndex] = depId.toString().split('.').map(Number);
+							if (parentId >= insertPosition) {
+								return parseFloat(`${parentId + 1}.${subtaskIndex}`);
+							}
+							return depId;
+						}
+					});
+				}
+				
+				return updatedSubtask;
+			});
+		}
+		
+		return updatedTask;
+	});
+	
+	return finalTasks;
+}
+
+/**
+ * Updates task IDs and all references when a task is removed, compacting the ID sequence
+ * @param {Array} tasks - Array of all tasks
+ * @param {Array} removedTaskIds - Array of task IDs that were removed (numbers only, not subtask IDs)
+ * @returns {Array} Updated tasks array with compacted IDs
+ */
+function compactTaskIds(tasks, removedTaskIds) {
+	// Sort removed IDs in ascending order to process them correctly
+	const sortedRemovedIds = [...removedTaskIds].sort((a, b) => a - b);
+	
+	// Create a mapping of old ID to new ID
+	const idMapping = new Map();
+	let currentNewId = 1;
+	
+	// Build the ID mapping by walking through all possible IDs
+	for (let oldId = 1; oldId <= Math.max(...tasks.map(t => t.id), ...sortedRemovedIds); oldId++) {
+		if (!sortedRemovedIds.includes(oldId)) {
+			// This ID wasn't removed, so it gets mapped to the next available position
+			idMapping.set(oldId, currentNewId);
+			currentNewId++;
+		}
+		// Removed IDs don't get a mapping (they're gone)
+	}
+	
+	// First pass: update task IDs
+	const updatedTasks = tasks.map(task => {
+		const newId = idMapping.get(task.id);
+		if (newId === undefined) {
+			// This shouldn't happen if we're calling this function correctly
+			throw new Error(`Task ID ${task.id} was supposed to be removed but is still in tasks array`);
+		}
+		
+		return {
+			...task,
+			id: newId
+		};
+	});
+	
+	// Second pass: update all dependency references
+	const finalTasks = updatedTasks.map(task => {
+		const updatedTask = { ...task };
+		
+		// Update main task dependencies
+		if (task.dependencies && task.dependencies.length > 0) {
+			updatedTask.dependencies = task.dependencies.map(depId => {
+				const newDepId = idMapping.get(depId);
+				if (newDepId === undefined) {
+					// This dependency was removed, so we filter it out
+					// Note: The caller should have already cleaned up references to removed tasks
+					// This is a safety check
+					log('warn', `Dependency reference to removed task ${depId} found and removed`);
+					return null;
+				}
+				return newDepId;
+			}).filter(depId => depId !== null);
+		}
+		
+		// Update subtask dependencies
+		if (task.subtasks && task.subtasks.length > 0) {
+			updatedTask.subtasks = task.subtasks.map(subtask => {
+				const updatedSubtask = { ...subtask };
+				
+				if (subtask.dependencies && subtask.dependencies.length > 0) {
+					updatedSubtask.dependencies = subtask.dependencies.map(depId => {
+						// Check if it's a task dependency (whole number) or subtask dependency (decimal)
+						if (Number.isInteger(depId)) {
+							// Task dependency - map to new ID
+							const newDepId = idMapping.get(depId);
+							if (newDepId === undefined) {
+								// This dependency was removed
+								log('warn', `Subtask dependency reference to removed task ${depId} found and removed`);
+								return null;
+							}
+							return newDepId;
+						} else {
+							// Subtask dependency (e.g., 1.2) - check parent task ID
+							const [parentId, subtaskIndex] = depId.toString().split('.').map(Number);
+							const newParentId = idMapping.get(parentId);
+							if (newParentId === undefined) {
+								// Parent task was removed
+								log('warn', `Subtask dependency reference to removed task ${parentId}.${subtaskIndex} found and removed`);
+								return null;
+							}
+							return parseFloat(`${newParentId}.${subtaskIndex}`);
+						}
+					}).filter(depId => depId !== null);
+				}
+				
+				return updatedSubtask;
+			});
+		}
+		
+		return updatedTask;
+	});
+	
+	return finalTasks;
+}
+
 // Export all utility functions and configuration
 export {
 	LOG_LEVELS,
@@ -640,5 +810,7 @@ export {
 	isSilentMode,
 	addComplexityToTask,
 	findProjectRoot,
-	aggregateTelemetry
+	aggregateTelemetry,
+	shiftTaskIds,
+	compactTaskIds
 };

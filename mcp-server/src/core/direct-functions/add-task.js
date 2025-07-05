@@ -23,6 +23,7 @@ import { createLogWrapper } from '../../tools/utils.js';
  * @param {string} [args.priority='medium'] - Task priority (high, medium, low)
  * @param {string} [args.assignees] - Comma-separated list of people or teams assigned to this task
  * @param {string} [args.executor='agent'] - Who should execute this task: "agent" or "human"
+ * @param {number} [args.id] - Insert the new task at this specific position (existing tasks will be shifted). If not provided, adds to the end.
  * @param {string} [args.tasksJsonPath] - Path to the tasks.json file (resolved by tool)
  * @param {boolean} [args.research=false] - Whether to use research capabilities for task creation
  * @param {string} [args.projectRoot] - Project root path
@@ -39,6 +40,7 @@ export async function addTaskDirect(args, log, context = {}) {
 		priority,
 		assignees,
 		executor,
+		id,
 		research,
 		projectRoot
 	} = args;
@@ -116,7 +118,10 @@ export async function addTaskDirect(args, log, context = {}) {
 				title: args.title,
 				description: args.description,
 				details: args.details || '',
-				testStrategy: args.testStrategy || ''
+				testStrategy: args.testStrategy || '',
+				assignees: taskAssignees,
+				executor: args.executor,
+				id: id || null
 			};
 
 			log.info(
@@ -137,15 +142,19 @@ export async function addTaskDirect(args, log, context = {}) {
 					outputType: 'mcp'
 				},
 				'json', // outputFormat
-				manualTaskData, // Pass the manual task data
-				false, // research flag is false for manual creation
-				taskAssignees, // Pass the assignees array
-				args.executor
+				manualTaskData, // Pass the manual task data including assignees and executor
+				false // research flag is false for manual creation
 			);
 			newTaskId = result.newTaskId;
 			telemetryData = result.telemetryData;
 		} else {
-			// AI-driven task creation
+			// AI-driven task creation - pass assignees and executor through manualTaskData
+			manualTaskData = {
+				assignees: taskAssignees,
+				executor: args.executor,
+				id: id || null
+			};
+
 			log.info(
 				`Adding new task with prompt: "${prompt}", dependencies: [${taskDependencies.join(', ')}], priority: ${taskPriority}, research: ${research}, assignees: [${taskAssignees.join(', ')}], executor: ${executor || 'agent'}`
 			);
@@ -164,10 +173,8 @@ export async function addTaskDirect(args, log, context = {}) {
 					outputType: 'mcp'
 				},
 				'json', // outputFormat
-				null, // manualTaskData is null for AI creation
-				research, // Pass the research flag
-				taskAssignees, // Pass the assignees array
-				args.executor
+				manualTaskData, // Pass manualTaskData containing assignees and executor
+				research // Pass the research flag
 			);
 			newTaskId = result.newTaskId;
 			telemetryData = result.telemetryData;

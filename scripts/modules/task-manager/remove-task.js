@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import { log, readJSON, writeJSON } from '../utils.js';
+import { log, readJSON, writeJSON, compactTaskIds } from '../utils.js';
 import generateTaskFiles from './generate-task-files.js';
 import taskExists from './task-exists.js';
 
@@ -144,6 +144,22 @@ async function removeTask(tasksPath, taskIds) {
 					});
 				}
 			});
+
+			// Check if any main tasks were removed (need to compact IDs)
+			const removedMainTaskIds = tasksToDeleteFiles; // This already contains the main task IDs that were removed
+			
+			if (removedMainTaskIds.length > 0) {
+				// Compact task IDs to maintain sequential numbering
+				try {
+					data.tasks = compactTaskIds(data.tasks, removedMainTaskIds);
+					results.messages.push(`Task IDs compacted after removing tasks: ${removedMainTaskIds.join(', ')}`);
+				} catch (compactError) {
+					const compactErrMsg = `Failed to compact task IDs: ${compactError.message}`;
+					results.errors.push(compactErrMsg);
+					results.success = false;
+					log('warn', compactErrMsg);
+				}
+			}
 
 			// Save the updated tasks file ONCE
 			writeJSON(tasksPath, data);
