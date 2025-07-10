@@ -15,7 +15,8 @@ import {
 	readJSON,
 	writeJSON,
 	truncate,
-	isSilentMode
+	isSilentMode,
+	findProjectRoot
 } from '../utils.js';
 import { generateTextService } from '../ai-services-unified.js';
 import { getDebugFlag } from '../config-manager.js';
@@ -42,7 +43,7 @@ async function updateSubtaskById(
 	context = {},
 	outputFormat = context.mcpLog ? 'json' : 'text'
 ) {
-	const { session, mcpLog, projectRoot } = context;
+	const { session, mcpLog, projectRoot } = {projectRoot: findProjectRoot(path.dirname(tasksPath)), ...context };
 	const logFn = mcpLog || consoleLog;
 	const isMCP = !!mcpLog;
 

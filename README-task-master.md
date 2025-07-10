@@ -76,7 +76,7 @@ After installing the package globally, you can use these CLI commands from any d
 task-master init
 
 # Parse a PRD and generate tasks
-task-master parse-prd your-prd.txt
+task-master parse-prd your-prd.md
 
 # List all tasks
 task-master list
@@ -130,7 +130,7 @@ Claude Task Master is designed to work seamlessly with [Cursor AI](https://www.c
 
 1. After initializing your project, open it in Cursor
 2. The `.cursor/rules/dev_workflow.mdc` file is automatically loaded by Cursor, providing the AI with knowledge about the task management system
-3. Place your PRD document in the `scripts/` directory (e.g., `scripts/prd.txt`)
+3. Place your PRD document in the `scripts/` directory (e.g., `scripts/prd.md`)
 4. Open Cursor's AI chat and switch to Agent mode
 
 ### Setting up MCP in Cursor
@@ -153,13 +153,13 @@ Once configured, you can interact with Task Master's task management commands di
 In Cursor's AI chat, instruct the agent to generate tasks from your PRD:
 
 ```
-Please use the task-master parse-prd command to generate tasks from my PRD. The PRD is located at scripts/prd.txt.
+Please use the task-master parse-prd command to generate tasks from my PRD. The PRD is located at scripts/prd.md.
 ```
 
 The agent will execute:
 
 ```bash
-task-master parse-prd scripts/prd.txt
+task-master parse-prd scripts/prd.md
 ```
 
 This will:
@@ -594,7 +594,7 @@ The `show` command:
 ### Starting a new project
 
 ```
-I've just initialized a new project with Claude Task Master. I have a PRD at scripts/prd.txt.
+I've just initialized a new project with Claude Task Master. I have a PRD at scripts/prd.md.
 Can you help me parse it and set up the initial tasks?
 ```
 

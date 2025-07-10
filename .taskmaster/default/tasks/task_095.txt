@@ -115,7 +115,7 @@ Implement path fallback logic that checks both old and new locations when files 
 ### Dependencies: 95.1, 95.4
 ### Description: Develop a Task Master command to help users transition their existing projects to the new structure
 ### Details:
-Create a 'taskmaster migrate' command that automatically moves user files from old locations to the new .taskmaster structure. Move tasks/ to .taskmaster/tasks/, scripts/prd.txt to .taskmaster/docs/, reports to .taskmaster/reports/, and .taskmasterconfig to .taskmaster/config.json. Include backup functionality and validation to ensure migration completed successfully.
+Create a 'taskmaster migrate' command that automatically moves user files from old locations to the new .taskmaster structure. Move tasks/ to .taskmaster/tasks/, scripts/prd.md to .taskmaster/docs/, reports to .taskmaster/reports/, and .taskmasterconfig to .taskmaster/config.json. Include backup functionality and validation to ensure migration completed successfully.
 
 ## 6. Update project initialization process [done]
 ### Dependencies: 95.1

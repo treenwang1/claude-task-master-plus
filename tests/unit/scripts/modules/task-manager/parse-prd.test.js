@@ -191,11 +191,11 @@ describe('parsePRD', () => {
 		});
 
 		// Call the function
-		const result = await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3);
+		const result = await parsePRD('path/to/prd.md', 'tasks/tasks.json', 3);
 
 		// Verify fs.readFileSync was called with the correct arguments
 		expect(fs.default.readFileSync).toHaveBeenCalledWith(
-			'path/to/prd.txt',
+			'path/to/prd.md',
 			'utf8'
 		);
 
@@ -240,7 +240,7 @@ describe('parsePRD', () => {
 		});
 
 		// Call the function
-		await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3);
+		await parsePRD('path/to/prd.md', 'tasks/tasks.json', 3);
 
 		// Verify mkdir was called
 		expect(fs.default.mkdirSync).toHaveBeenCalledWith('tasks', {
@@ -262,7 +262,7 @@ describe('parsePRD', () => {
 
 		// Call the function with mcpLog to make it think it's in MCP mode (which throws instead of process.exit)
 		await expect(
-			parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3, {
+			parsePRD('path/to/prd.md', 'tasks/tasks.json', 3, {
 				mcpLog: {
 					info: jest.fn(),
 					warn: jest.fn(),
@@ -283,7 +283,7 @@ describe('parsePRD', () => {
 		});
 
 		// Call the function
-		await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3);
+		await parsePRD('path/to/prd.md', 'tasks/tasks.json', 3);
 
 		// Verify generateTaskFiles was called
 		expect(generateTaskFiles).toHaveBeenCalledWith(
@@ -302,7 +302,7 @@ describe('parsePRD', () => {
 		});
 
 		// Call the function with force=true to allow overwrite
-		await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3, { force: true });
+		await parsePRD('path/to/prd.md', 'tasks/tasks.json', 3, { force: true });
 
 		// Verify prompt was NOT called (confirmation happens at CLI level, not in core function)
 		expect(promptYesNo).not.toHaveBeenCalled();
@@ -324,7 +324,7 @@ describe('parsePRD', () => {
 
 		// Call the function with mcpLog to make it think it's in MCP mode (which throws instead of process.exit)
 		await expect(
-			parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3, {
+			parsePRD('path/to/prd.md', 'tasks/tasks.json', 3, {
 				mcpLog: {
 					info: jest.fn(),
 					warn: jest.fn(),
@@ -359,7 +359,7 @@ describe('parsePRD', () => {
 
 		// Call the function without mcpLog (CLI mode) and expect it to throw due to mocked process.exit
 		await expect(
-			parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3)
+			parsePRD('path/to/prd.md', 'tasks/tasks.json', 3)
 		).rejects.toThrow('process.exit: 1');
 
 		// Verify process.exit was called with code 1
@@ -381,7 +381,7 @@ describe('parsePRD', () => {
 		});
 
 		// Call the function
-		await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3);
+		await parsePRD('path/to/prd.md', 'tasks/tasks.json', 3);
 
 		// Verify prompt was NOT called
 		expect(promptYesNo).not.toHaveBeenCalled();
@@ -411,7 +411,7 @@ describe('parsePRD', () => {
 		});
 
 		// Call the function with append option
-		const result = await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 2, {
+		const result = await parsePRD('path/to/prd.md', 'tasks/tasks.json', 2, {
 			append: true
 		});
 
@@ -452,7 +452,7 @@ describe('parsePRD', () => {
 		});
 
 		// Call the function with append option
-		await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3, {
+		await parsePRD('path/to/prd.md', 'tasks/tasks.json', 3, {
 			append: true
 		});
 

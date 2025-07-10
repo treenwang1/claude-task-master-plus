@@ -57,9 +57,6 @@ export function normalizeProjectRoot(projectRoot) {
 export function findProjectRoot(startDir = process.cwd()) {
 	const projectMarkers = [
 		'.taskmaster',
-		TASKMASTER_TASKS_FILE,
-		'tasks.json',
-		LEGACY_TASKS_FILE,
 		'.git',
 		'.svn',
 		'package.json',
@@ -92,7 +89,7 @@ export function findProjectRoot(startDir = process.cwd()) {
  * @param {Object|null} log - Logger object (optional)
  * @returns {Promise<string|null>} - Resolved tasks.json path or null if not found
  */
-export async function findTasksPath(explicitPath = null, args = null, log = null) {
+export function findTasksPath(explicitPath = null, args = null, log = null) {
 	// Use the passed logger if available, otherwise use the default logger
 	const logger = getLoggerOrDefault(log);
 
@@ -219,7 +216,7 @@ export async function findPRDPath(explicitPath = null, args = null, log = null) 
 		'' // Project root
 	];
 
-	const fileNames = ['PRD.md', 'prd.md', 'PRD.txt', 'prd.txt'];
+	const fileNames = ['PRD.md', 'prd.md', 'PRD.txt', 'prd.md'];
 
 	for (const location of locations) {
 		for (const fileName of fileNames) {

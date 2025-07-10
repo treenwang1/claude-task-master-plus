@@ -135,7 +135,7 @@ function analyzeMigrationNeeds(projectRoot) {
 					lowerFile.includes('boilerplate') ||
 					lowerFile.includes('sample')
 				) {
-					// Template/example files go to templates (including example_prd.txt)
+					// Template/example files go to templates (including example_prd.md)
 					destination = path.join('.taskmaster', 'templates', file);
 				} else if (
 					lowerFile.includes('complexity') &&

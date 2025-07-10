@@ -147,7 +147,7 @@ async function runTests() {
 		// Test 1: Small PRD, 5 tasks
 		console.log('\n=== Test 1: Small PRD, 5 tasks ===');
 		const smallPRD = createTestPRD('small', 'simple');
-		const smallPRDPath = path.join(__dirname, 'test-small-prd.txt');
+		const smallPRDPath = path.join(__dirname, 'test-small-prd.md');
 		fs.writeFileSync(smallPRDPath, smallPRD, 'utf8');
 
 		console.log(`Created test PRD at ${smallPRDPath}`);
@@ -171,7 +171,7 @@ async function runTests() {
 		// Test 2: Medium PRD, 15 tasks
 		console.log('\n=== Test 2: Medium PRD, 15 tasks ===');
 		const mediumPRD = createTestPRD('medium', 'simple');
-		const mediumPRDPath = path.join(__dirname, 'test-medium-prd.txt');
+		const mediumPRDPath = path.join(__dirname, 'test-medium-prd.md');
 		fs.writeFileSync(mediumPRDPath, mediumPRD, 'utf8');
 
 		console.log(`Created test PRD at ${mediumPRDPath}`);
@@ -192,7 +192,7 @@ async function runTests() {
 		// Test 3: Large PRD, 25 tasks
 		console.log('\n=== Test 3: Large PRD, 25 tasks ===');
 		const largePRD = createTestPRD('large', 'complex');
-		const largePRDPath = path.join(__dirname, 'test-large-prd.txt');
+		const largePRDPath = path.join(__dirname, 'test-large-prd.md');
 		fs.writeFileSync(largePRDPath, largePRD, 'utf8');
 
 		console.log(`Created test PRD at ${largePRDPath}`);
@@ -217,9 +217,9 @@ async function runTests() {
 		// Clean up test files
 		console.log('\nCleaning up test files...');
 		const testFiles = [
-			path.join(__dirname, 'test-small-prd.txt'),
-			path.join(__dirname, 'test-medium-prd.txt'),
-			path.join(__dirname, 'test-large-prd.txt')
+			path.join(__dirname, 'test-small-prd.md'),
+			path.join(__dirname, 'test-medium-prd.md'),
+			path.join(__dirname, 'test-large-prd.md')
 		];
 
 		testFiles.forEach((file) => {

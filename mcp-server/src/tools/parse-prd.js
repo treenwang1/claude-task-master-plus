@@ -10,11 +10,7 @@ import {
 	createErrorResponse
 } from './utils.js';
 import { parsePRDDirect } from '../core/task-master-core.js';
-import {
-	PRD_FILE,
-	TASKMASTER_DOCS_DIR,
-	TASKMASTER_TASKS_FILE
-} from '../../../src/constants/paths.js';
+import {PRD_FILE, TASKMASTER_DOCS_DIR, TASKMASTER_TASKS_FILE} from '../../../src/constants/paths.js';
 
 /**
  * Register the parse_prd tool
@@ -23,13 +19,13 @@ import {
 export function registerParsePRDTool(server) {
 	server.addTool({
 		name: 'parse_prd',
-		description: `Parse a Product Requirements Document (PRD) text file to automatically generate initial tasks. Reinitializing the project is not necessary to run this tool. It is recommended to run parse-prd after initializing the project and creating/importing a prd.txt file in the project root's ${TASKMASTER_DOCS_DIR} directory.`,
+		description: `Parse a Product Requirements Document (PRD) text file to automatically generate initial tasks. Reinitializing the project is not necessary to run this tool. It is recommended to run parse-prd after initializing the project and creating/importing a prd.md file in the project root's ${TASKMASTER_DOCS_DIR} directory.`,
 		parameters: z.object({
 			input: z
 				.string()
 				.optional()
 				.default(PRD_FILE)
-				.describe(`Absolute path to the PRD document file (prd.txt, prd.md, etc. default: ${PRD_FILE})`),
+				.describe(`Absolute path to the PRD document file (prd.md, prd.md, etc. default: ${PRD_FILE})`),
 			projectRoot: z
 				.string()
 				.describe('The directory of the project. Must be an absolute path.'),

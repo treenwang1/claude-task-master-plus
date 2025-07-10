@@ -61,9 +61,9 @@ Users have two options for creating initial tasks:
 **Option A: Parse a PRD (Recommended)**
 If they have a Product Requirements Document:
 
-> Can you parse my PRD file at [path/to/prd.txt] to generate initial tasks?
+> Can you parse my PRD file at [path/to/prd.md] to generate initial tasks?
 
-If the user does not have a PRD, the AI agent can help them create one and store it in scripts/prd.txt for parsing.
+If the user does not have a PRD, the AI agent can help them create one and store it in scripts/prd.md for parsing.
 
 **Option B: Start from scratch**
 
@@ -123,7 +123,7 @@ Taskmaster is also available via CLI commands, by installing with `npm install t
 
 Once installed, users can:
 
-- Create new tasks with `add-task` or parse a PRD (scripts/prd.txt) into tasks with `parse-prd`
+- Create new tasks with `add-task` or parse a PRD (scripts/prd.md) into tasks with `parse-prd`
 - Set up model preferences with `models` tool
 - Expand tasks into subtasks with `expand-all` and `expand-task`
 - Explore advanced features like research mode and complexity analysis

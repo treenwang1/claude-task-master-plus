@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { z } from 'zod';
 
-import { log, readJSON, writeJSON, isSilentMode } from '../utils.js';
+import { log, readJSON, writeJSON, isSilentMode, findProjectRoot } from '../utils.js';
 
 import {
 	startLoadingIndicator,
@@ -105,7 +105,7 @@ function generateMainUserPrompt(
 {
   "subtasks": [
     {
-      "id": ${nextSubtaskId}, // First subtask ID
+      "id": ${nextSubtaskId}, // First subtask ID, integer
       "title": "Specific subtask title",
       "description": "Detailed description",
       "dependencies": [], // e.g., [${nextSubtaskId + 1}] if it depends on the next
@@ -149,10 +149,10 @@ function generateResearchUserPrompt(
 {
   "subtasks": [
     {
-      "id": <number>, // Sequential ID starting from ${nextSubtaskId}
+      "id": <integer>, // Sequential ID starting from ${nextSubtaskId}
       "title": "<string>",
       "description": "<string>",
-      "dependencies": [<number>], // e.g., [${nextSubtaskId + 1}]. If no dependencies, use an empty array [].
+      "dependencies": [<integer>], // e.g., [${nextSubtaskId + 1}]. If no dependencies, use an empty array [].
       "details": "<string>",
       "testStrategy": "<string>" // Optional
     },
@@ -423,7 +423,7 @@ async function expandTask(
 
 	// Determine projectRoot: Use from context if available, otherwise derive from tasksPath
 	const projectRoot =
-		contextProjectRoot || path.dirname(path.dirname(tasksPath));
+		contextProjectRoot || findProjectRoot(path.dirname(tasksPath));
 
 	// Use mcpLog if available, otherwise use the default console log wrapper
 	const logger = mcpLog || {

@@ -139,10 +139,10 @@ Initialize taskmaster-ai in my project
 
 #### 5. Make sure you have a PRD (Recommended)
 
-For **new projects**: Create your PRD at `.taskmaster/${taskgroup}/docs/prd.txt`  
-For **existing projects**: You can use `scripts/prd.txt` or migrate with `task-master migrate`
+For **new projects**: Create your PRD at `.taskmaster/${taskgroup}/docs/prd.md`  
+For **existing projects**: You can use `scripts/prd.md` or migrate with `task-master migrate`
 
-An example PRD template is available after initialization in `.taskmaster/${taskgroup}/templates/example_prd.txt`.
+An example PRD template is available after initialization in `.taskmaster/${taskgroup}/templates/example_prd.md`.
 
 > [!NOTE]
 > While a PRD is recommended for complex projects, you can always create individual tasks by asking "Can you help me implement [description of what you want to do]?" in chat.
@@ -155,7 +155,7 @@ The more detailed your PRD, the better the generated tasks will be.
 
 Use your AI assistant to:
 
-- Parse requirements: `Can you parse my PRD at scripts/prd.txt?`
+- Parse requirements: `Can you parse my PRD at scripts/prd.md?`
 - Plan next step: `What's the next task I should work on?`
 - Implement a task: `Can you help me implement task 3?`
 - Expand a task: `Can you help me expand task 4?`
@@ -193,7 +193,7 @@ This will prompt you for project details and set up a new project with the neces
 task-master init
 
 # Parse a PRD and generate tasks
-task-master parse-prd your-prd.txt
+task-master parse-prd your-prd.md
 
 # List all tasks
 task-master list

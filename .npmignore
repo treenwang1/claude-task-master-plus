@@ -29,8 +29,8 @@ jest.config.js
 # Original project files
 tasks.json
 tasks/
-prd.txt
-scripts/prd.txt
+prd.md
+scripts/prd.md
 .env 
 
 # Temporary files

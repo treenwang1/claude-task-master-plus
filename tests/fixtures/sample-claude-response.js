@@ -46,7 +46,7 @@ export const sampleClaudeResponse = {
 	metadata: {
 		projectName: 'Task Management CLI',
 		totalTasks: 3,
-		sourceFile: 'tests/fixtures/sample-prd.txt',
+		sourceFile: 'tests/fixtures/sample-prd.md',
 		generatedAt: '2023-12-15'
 	}
 };

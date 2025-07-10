@@ -78,7 +78,8 @@ import {
 	taskExists,
 	formatTaskId,
 	findCycles,
-	toKebabCase
+	toKebabCase,
+	regenerateSequentialTaskIds
 } from '../../scripts/modules/utils.js';
 
 // Import the mocked modules for use in tests
@@ -618,6 +619,271 @@ describe('Utils Module', () => {
 
 			expect(cycles).toContain('B');
 		});
+	});
+});
+
+describe('regenerateSequentialTaskIds function', () => {
+	test('should regenerate sequential IDs starting from 1', () => {
+		const tasks = [
+			{ id: 5, title: 'Task 5', dependencies: [] },
+			{ id: 2, title: 'Task 2', dependencies: [] },
+			{ id: 8, title: 'Task 8', dependencies: [] }
+		];
+
+		const result = regenerateSequentialTaskIds(tasks);
+
+		expect(result).toHaveLength(3);
+		expect(result[0]).toEqual({ id: 1, title: 'Task 2', dependencies: [] }); // Task 2 becomes ID 1
+		expect(result[1]).toEqual({ id: 2, title: 'Task 5', dependencies: [] }); // Task 5 becomes ID 2
+		expect(result[2]).toEqual({ id: 3, title: 'Task 8', dependencies: [] }); // Task 8 becomes ID 3
+	});
+
+	test('should update task dependencies correctly', () => {
+		const tasks = [
+			{ id: 10, title: 'Task 10', dependencies: [5] },
+			{ id: 5, title: 'Task 5', dependencies: [] },
+			{ id: 15, title: 'Task 15', dependencies: [10, 5] }
+		];
+
+		const result = regenerateSequentialTaskIds(tasks);
+
+		expect(result).toHaveLength(3);
+		// Task 5 (originally) becomes ID 1
+		expect(result[0]).toEqual({ id: 1, title: 'Task 5', dependencies: [] });
+		// Task 10 (originally) becomes ID 2, dependency 5 becomes 1
+		expect(result[1]).toEqual({ id: 2, title: 'Task 10', dependencies: [1] });
+		// Task 15 (originally) becomes ID 3, dependencies 10,5 become 2,1
+		expect(result[2]).toEqual({ id: 3, title: 'Task 15', dependencies: [2, 1] });
+	});
+
+	test('should update subtask dependencies correctly', () => {
+		const tasks = [
+			{
+				id: 10,
+				title: 'Task 10',
+				dependencies: [],
+				subtasks: [
+					{ id: 3, title: 'Subtask 3', dependencies: [5] },
+					{ id: 7, title: 'Subtask 7', dependencies: [10, 5.2] }
+				]
+			},
+			{ id: 5, title: 'Task 5', dependencies: [], subtasks: [
+				{ id: 4, title: 'Subtask 4 of Task 5', dependencies: [] },
+				{ id: 2, title: 'Subtask 2 of Task 5', dependencies: [] }
+			] }
+		];
+
+		const result = regenerateSequentialTaskIds(tasks);
+
+		expect(result).toHaveLength(2);
+		// Task 5 becomes ID 1
+		expect(result[0].id).toBe(1);
+		expect(result[0].title).toBe('Task 5');
+		// Subtasks get sequential IDs: 2 becomes 1, 4 becomes 2 (sorted by original ID)
+		expect(result[0].subtasks[0]).toEqual({ id: 1, title: 'Subtask 2 of Task 5', dependencies: [] });
+		expect(result[0].subtasks[1]).toEqual({ id: 2, title: 'Subtask 4 of Task 5', dependencies: [] });
+		
+		// Task 10 becomes ID 2
+		expect(result[1].id).toBe(2);
+		expect(result[1].title).toBe('Task 10');
+		// Subtasks get sequential IDs: 3 becomes 1, 7 becomes 2 (sorted by original ID)
+		// Subtask dependencies: 5 becomes 1, 5.2 becomes 1.1 (task 5 subtask 2 -> task 1 subtask 1)
+		expect(result[1].subtasks[0]).toEqual({ id: 1, title: 'Subtask 3', dependencies: [1] });
+		expect(result[1].subtasks[1]).toEqual({ id: 2, title: 'Subtask 7', dependencies: [2, 1.1] });
+	});
+
+	test('should make subtask IDs sequential integers within each parent task', () => {
+		const tasks = [
+			{
+				id: 1,
+				title: 'Task 1',
+				dependencies: [],
+				subtasks: [
+					{ id: 10, title: 'Subtask 10', dependencies: [] },
+					{ id: 5, title: 'Subtask 5', dependencies: [] },
+					{ id: 15, title: 'Subtask 15', dependencies: [] }
+				]
+			},
+			{
+				id: 2,
+				title: 'Task 2',
+				dependencies: [],
+				subtasks: [
+					{ id: 20, title: 'Subtask 20', dependencies: [] },
+					{ id: 12, title: 'Subtask 12', dependencies: [] }
+				]
+			}
+		];
+
+		const result = regenerateSequentialTaskIds(tasks);
+
+		expect(result).toHaveLength(2);
+		
+		// Task 1 subtasks should be renumbered 1, 2, 3 (sorted by original ID: 5, 10, 15)
+		expect(result[0].subtasks[0]).toEqual({ id: 1, title: 'Subtask 5', dependencies: [] });
+		expect(result[0].subtasks[1]).toEqual({ id: 2, title: 'Subtask 10', dependencies: [] });
+		expect(result[0].subtasks[2]).toEqual({ id: 3, title: 'Subtask 15', dependencies: [] });
+		
+		// Task 2 subtasks should be renumbered 1, 2 (sorted by original ID: 12, 20)
+		expect(result[1].subtasks[0]).toEqual({ id: 1, title: 'Subtask 12', dependencies: [] });
+		expect(result[1].subtasks[1]).toEqual({ id: 2, title: 'Subtask 20', dependencies: [] });
+	});
+
+	test('should update subtask dependencies when referencing other subtasks', () => {
+		const tasks = [
+			{
+				id: 10,
+				title: 'Task 10',
+				dependencies: [],
+				subtasks: [
+					{ id: 5, title: 'Subtask 5', dependencies: [] },
+					{ id: 8, title: 'Subtask 8', dependencies: [10.5] }, // References subtask 5 of task 10
+					{ id: 3, title: 'Subtask 3', dependencies: [10.8, 10.5] } // References subtasks 8 and 5 of task 10
+				]
+			}
+		];
+
+		const result = regenerateSequentialTaskIds(tasks);
+
+		expect(result).toHaveLength(1);
+		expect(result[0].id).toBe(1);
+		
+		// Subtasks should be renumbered based on sorted original IDs: 3->1, 5->2, 8->3
+		expect(result[0].subtasks[0]).toEqual({ id: 1, title: 'Subtask 3', dependencies: [1.3, 1.2] }); // 10.8->1.3, 10.5->1.2
+		expect(result[0].subtasks[1]).toEqual({ id: 2, title: 'Subtask 5', dependencies: [] });
+		expect(result[0].subtasks[2]).toEqual({ id: 3, title: 'Subtask 8', dependencies: [1.2] }); // 10.5->1.2
+	});
+
+	test('should handle tasks with no dependencies', () => {
+		const tasks = [
+			{ id: 100, title: 'Task 100' },
+			{ id: 50, title: 'Task 50' },
+			{ id: 200, title: 'Task 200' }
+		];
+
+		const result = regenerateSequentialTaskIds(tasks);
+
+		expect(result).toHaveLength(3);
+		expect(result[0]).toEqual({ id: 1, title: 'Task 50' });
+		expect(result[1]).toEqual({ id: 2, title: 'Task 100' });
+		expect(result[2]).toEqual({ id: 3, title: 'Task 200' });
+	});
+
+	test('should handle empty task array', () => {
+		const tasks = [];
+		const result = regenerateSequentialTaskIds(tasks);
+		expect(result).toEqual([]);
+	});
+
+	test('should handle null and undefined inputs', () => {
+		expect(regenerateSequentialTaskIds(null)).toBe(null);
+		expect(regenerateSequentialTaskIds(undefined)).toBe(undefined);
+	});
+
+	test('should handle single task', () => {
+		const tasks = [{ id: 42, title: 'Single Task', dependencies: [] }];
+		const result = regenerateSequentialTaskIds(tasks);
+
+		expect(result).toHaveLength(1);
+		expect(result[0]).toEqual({ id: 1, title: 'Single Task', dependencies: [] });
+	});
+
+	test('should remove invalid dependency references', () => {
+		// Create a console.log spy to capture warning messages
+		const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+		const tasks = [
+			{ id: 5, title: 'Task 5', dependencies: [999] }, // 999 doesn't exist
+			{ id: 10, title: 'Task 10', dependencies: [5, 888] } // 888 doesn't exist
+		];
+
+		const result = regenerateSequentialTaskIds(tasks);
+
+		expect(result).toHaveLength(2);
+		// Task 5 becomes ID 1, invalid dependency 999 removed
+		expect(result[0]).toEqual({ id: 1, title: 'Task 5', dependencies: [] });
+		// Task 10 becomes ID 2, dependency 5 becomes 1, invalid dependency 888 removed
+		expect(result[1]).toEqual({ id: 2, title: 'Task 10', dependencies: [1] });
+
+		// Restore console.log
+		logSpy.mockRestore();
+	});
+
+	test('should handle complex subtask dependency scenarios', () => {
+		const tasks = [
+			{
+				id: 20,
+				title: 'Task 20',
+				dependencies: [],
+				subtasks: [
+					{ id: 3, title: 'Subtask 3', dependencies: [10.5, 999] }, // 999 invalid, 10.5 should become 1.2
+					{ id: 1, title: 'Subtask 1', dependencies: [10] }
+				]
+			},
+			{
+				id: 10,
+				title: 'Task 10',
+				dependencies: [],
+				subtasks: [
+					{ id: 7, title: 'Subtask 7 of 10', dependencies: [] },
+					{ id: 5, title: 'Subtask 5 of 10', dependencies: [20] }
+				]
+			}
+		];
+
+		// Create a console.log spy to capture warning messages
+		const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+		const result = regenerateSequentialTaskIds(tasks);
+
+		expect(result).toHaveLength(2);
+		
+		// Task 10 becomes ID 1, subtasks get sequential IDs: 5->1, 7->2 (sorted by original ID)
+		expect(result[0].id).toBe(1);
+		expect(result[0].title).toBe('Task 10');
+		expect(result[0].subtasks[0]).toEqual({ id: 1, title: 'Subtask 5 of 10', dependencies: [2] }); // 20 becomes 2
+		expect(result[0].subtasks[1]).toEqual({ id: 2, title: 'Subtask 7 of 10', dependencies: [] });
+		
+		// Task 20 becomes ID 2, subtasks get sequential IDs: 1->1, 3->2 (sorted by original ID)
+		expect(result[1].id).toBe(2);
+		expect(result[1].title).toBe('Task 20');
+		expect(result[1].subtasks[0]).toEqual({ id: 1, title: 'Subtask 1', dependencies: [1] }); // 10 becomes 1
+		expect(result[1].subtasks[1]).toEqual({ id: 2, title: 'Subtask 3', dependencies: [1.1] }); // 10.5 becomes 1.1, 999 removed
+
+		// Restore console.log
+		logSpy.mockRestore();
+	});
+
+	test('should preserve task order based on original IDs (sorted)', () => {
+		const tasks = [
+			{ id: 3, title: 'Task C', dependencies: [] },
+			{ id: 1, title: 'Task A', dependencies: [] },
+			{ id: 2, title: 'Task B', dependencies: [] }
+		];
+
+		const result = regenerateSequentialTaskIds(tasks);
+
+		// Should be sorted by original ID: 1, 2, 3
+		expect(result[0]).toEqual({ id: 1, title: 'Task A', dependencies: [] });
+		expect(result[1]).toEqual({ id: 2, title: 'Task B', dependencies: [] });
+		expect(result[2]).toEqual({ id: 3, title: 'Task C', dependencies: [] });
+	});
+
+	test('should handle gaps in original ID sequence', () => {
+		const tasks = [
+			{ id: 1, title: 'Task 1', dependencies: [] },
+			{ id: 5, title: 'Task 5', dependencies: [1] },
+			{ id: 10, title: 'Task 10', dependencies: [5] },
+			{ id: 100, title: 'Task 100', dependencies: [10, 1] }
+		];
+
+		const result = regenerateSequentialTaskIds(tasks);
+
+		expect(result).toHaveLength(4);
+		expect(result[0]).toEqual({ id: 1, title: 'Task 1', dependencies: [] });
+		expect(result[1]).toEqual({ id: 2, title: 'Task 5', dependencies: [1] });
+		expect(result[2]).toEqual({ id: 3, title: 'Task 10', dependencies: [2] });
+		expect(result[3]).toEqual({ id: 4, title: 'Task 100', dependencies: [3, 1] });
 	});
 });
 

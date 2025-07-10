@@ -15,8 +15,8 @@ your-project/
 │   ├── task-1.txt
 │   └── task-2.txt
 ├── scripts/                  # PRD and reports
-│   ├── prd.txt
-│   ├── example_prd.txt
+│   ├── prd.md
+│   ├── example_prd.md
 │   └── task-complexity-report.json
 ├── .taskmasterconfig         # Configuration
 └── ... (your project files)
@@ -34,22 +34,22 @@ your-project/
 │   │   │   ├── task-1.txt
 │   │   │   └── task-2.txt
 │   │   ├── docs/                # Project documentation
-│   │   │   └── prd.txt
+│   │   │   └── prd.md
 │   │   ├── reports/             # Generated reports
 │   │   │   └── task-complexity-report.json
 │   │   └── templates/           # Example/template files
-│   │       └── example_prd.txt
+│   │       └── example_prd.md
 │   ├── taskgroup1  
 │   │   ├── tasks/               # Task files
 │   │   │   ├── tasks.json
 │   │   │   ├── task-1.txt
 │   │   │   └── task-2.txt
 │   │   ├── docs/                # Project documentation
-│   │   │   └── prd.txt
+│   │   │   └── prd.md
 │   │   ├── reports/             # Generated reports
 │   │   │   └── task-complexity-report.json
 │   │   └── templates/           # Example/template files
-│   │       └── example_prd.txt
+│   │       └── example_prd.md
 └── ... (your project files)
 ```
 
@@ -111,8 +111,8 @@ If you prefer to migrate manually:
    mv .taskmasterconfig .taskmaster/config.json
 
    # Move PRD and documentation
-   mv scripts/prd.txt .taskmaster/docs/
-   mv scripts/example_prd.txt .taskmaster/templates/
+   mv scripts/prd.md .taskmaster/docs/
+   mv scripts/example_prd.md .taskmaster/templates/
 
    # Move reports (if they exist)
    mv scripts/task-complexity-report.json .taskmaster/reports/ 2>/dev/null || true
@@ -135,9 +135,9 @@ The migration process handles these file types:
 ### Scripts Directory → Multiple Destinations
 
 - **PRD files** → `.taskmaster/docs/`
-  - `prd.txt`, `requirements.txt`, etc.
+  - `prd.md`, `requirements.txt`, etc.
 - **Example/Template files** → `.taskmaster/templates/`
-  - `example_prd.txt`, template files
+  - `example_prd.md`, template files
 - **Reports** → `.taskmaster/reports/`
   - `task-complexity-report.json`
 
@@ -229,8 +229,8 @@ If you're developing tools or scripts that interact with Task Master files:
 
 ### PRD Files
 
-- **Old:** `scripts/prd.txt`
-- **New:** `.taskmaster/docs/prd.txt`
+- **Old:** `scripts/prd.md`
+- **New:** `.taskmaster/docs/prd.md`
 - **Fallback:** Task Master checks both locations
 
 ## Need Help?

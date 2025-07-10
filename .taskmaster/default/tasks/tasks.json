@@ -5754,7 +5754,7 @@
             1,
             4
           ],
-          "details": "Create a 'taskmaster migrate' command that automatically moves user files from old locations to the new .taskmaster structure. Move tasks/ to .taskmaster/tasks/, scripts/prd.txt to .taskmaster/docs/, reports to .taskmaster/reports/, and .taskmasterconfig to .taskmaster/config.json. Include backup functionality and validation to ensure migration completed successfully.",
+          "details": "Create a 'taskmaster migrate' command that automatically moves user files from old locations to the new .taskmaster structure. Move tasks/ to .taskmaster/tasks/, scripts/prd.md to .taskmaster/docs/, reports to .taskmaster/reports/, and .taskmasterconfig to .taskmaster/config.json. Include backup functionality and validation to ensure migration completed successfully.",
           "status": "done",
           "testStrategy": "Test the migration command on various user project configurations. Verify it handles edge cases like missing directories or partial existing structures."
         },

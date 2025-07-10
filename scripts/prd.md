@@ -60,7 +60,7 @@
   "meta": {
     "projectName": "Project Name",
     "version": "1.0.0",
-    "prdSource": "path/to/prd.txt",
+    "prdSource": "path/to/prd.md",
     "createdAt": "ISO-8601 timestamp",
     "updatedAt": "ISO-8601 timestamp"
   },

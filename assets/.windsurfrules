@@ -91,7 +91,7 @@ alwaysApply: true
   - CLI Syntax: `task-master parse-prd --input=<prd-file.txt>`
   - Description: Parses a PRD document and generates a tasks.json file with structured tasks
   - Parameters: 
-    - `--input=<file>`: Path to the PRD text file (default: sample-prd.txt)
+    - `--input=<file>`: Path to the PRD text file (default: sample-prd.md)
   - Example: `task-master parse-prd --input=requirements.txt`
   - Notes: Will overwrite existing tasks.json file. Use with caution.
 

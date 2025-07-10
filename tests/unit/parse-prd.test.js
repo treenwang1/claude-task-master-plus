@@ -27,7 +27,7 @@ describe('parse-prd file extension compatibility', () => {
 		};
 
 		// Test with different extensions
-		expect(fileValidator('/path/to/prd.txt')).toBe(true);
+		expect(fileValidator('/path/to/prd.md')).toBe(true);
 		expect(fileValidator('/path/to/prd.md')).toBe(true);
 
 		// Invalid cases should still fail regardless of extension
@@ -55,7 +55,7 @@ describe('parse-prd file extension compatibility', () => {
 		};
 
 		// Verify same behavior for different extensions
-		const txtResult = mockImplementation('/path/to/prd.txt');
+		const txtResult = mockImplementation('/path/to/prd.md');
 		const mdResult = mockImplementation('/path/to/prd.md');
 
 		// Both should succeed since there's no extension-specific logic

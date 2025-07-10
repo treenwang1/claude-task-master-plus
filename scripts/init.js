@@ -584,6 +584,12 @@ function createProjectStructure(addAliases, dryRun, options) {
 			'self_improve.mdc',
 			path.join(targetDir, '.cursor/rules/self_improve.mdc')
 		);
+
+		// Copy generate_prd.mdc
+		copyTemplateFile(
+			'generate_prd.mdc',
+			path.join(targetDir, '.cursor/rules/generate_prd.mdc')
+		);
 	}
 
 	// Copy Windsurf-specific files
@@ -641,8 +647,8 @@ function createProjectStructure(addAliases, dryRun, options) {
 		}
 	}
 
-	// Copy example_prd.txt to NEW location
-	copyTemplateFile('example_prd.txt', path.join(targetDir, EXAMPLE_PRD_FILE));
+	// Copy example_prd.md to NEW location
+	copyTemplateFile('example_prd.md', path.join(targetDir, EXAMPLE_PRD_FILE));
 
 	// Initialize git repository if git is available
 	try {
@@ -745,10 +751,10 @@ function createProjectStructure(addAliases, dryRun, options) {
 				)}\n${chalk.white('   ├─ ')}${chalk.dim('Models: Use `task-master models` commands')}\n${chalk.white('   └─ ')}${chalk.dim(
 					'Keys: Add provider API keys to .env (or inside the MCP config file i.e. .cursor/mcp.json)'
 				)}\n${chalk.white('2. ')}${chalk.yellow(
-					'Discuss your idea with AI and ask for a PRD using example_prd.txt, and save it to scripts/PRD.txt'
+					'Discuss your idea with AI and ask for a PRD using example_prd.md, and save it to scripts/PRD.txt'
 				)}\n${chalk.white('3. ')}${chalk.yellow(
 					'Ask Cursor Agent (or run CLI) to parse your PRD and generate initial tasks:'
-				)}\n${chalk.white('   └─ ')}${chalk.dim('MCP Tool: ')}${chalk.cyan('parse_prd')}${chalk.dim(' | CLI: ')}${chalk.cyan('task-master parse-prd scripts/prd.txt')}\n${chalk.white('4. ')}${chalk.yellow(
+				)}\n${chalk.white('   └─ ')}${chalk.dim('MCP Tool: ')}${chalk.cyan('parse_prd')}${chalk.dim(' | CLI: ')}${chalk.cyan('task-master parse-prd scripts/prd.md')}\n${chalk.white('4. ')}${chalk.yellow(
 					'Ask Cursor to analyze the complexity of the tasks in your PRD using research'
 				)}\n${chalk.white('   └─ ')}${chalk.dim('MCP Tool: ')}${chalk.cyan('analyze_project_complexity')}${chalk.dim(' | CLI: ')}${chalk.cyan('task-master analyze-complexity')}\n${chalk.white('5. ')}${chalk.yellow(
 					'Ask Cursor to expand all of your tasks using the complexity analysis'

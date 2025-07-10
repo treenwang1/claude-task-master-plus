@@ -561,7 +561,7 @@ npm test -- -t "pattern to match"
     await parsePrdAction(undefined, { numTasks: '10', output: 'tasks/tasks.json' });
     
     // Assert on behavior
-    expect(mockParsePRD).toHaveBeenCalledWith('scripts/prd.txt', 'tasks/tasks.json', 10);
+    expect(mockParsePRD).toHaveBeenCalledWith('scripts/prd.md', 'tasks/tasks.json', 10);
   });
   ```
 

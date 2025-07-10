@@ -7,7 +7,7 @@
 ```bash
 # Project Setup
 task-master init                                    # Initialize Task Master in current project
-task-master parse-prd .taskmaster/default/docs/prd.txt      # Generate tasks from PRD document
+task-master parse-prd .taskmaster/default/docs/prd.md      # Generate tasks from PRD document
 task-master models --setup                        # Configure AI models interactively
 
 # Daily Development Workflow
@@ -41,7 +41,7 @@ task-master generate                                         # Update task markd
 
 - `.taskmaster/default/tasks/tasks.json` - Main task data file (auto-managed)
 - `.taskmaster/default/config.json` - AI model configuration (use `task-master models` to modify)
-- `.taskmaster/default/docs/prd.txt` - Product Requirements Document for parsing
+- `.taskmaster/default/docs/prd.md` - Product Requirements Document for parsing
 - `.taskmaster/default/tasks/*.txt` - Individual task files (auto-generated from tasks.json)
 - `.env` - API keys for CLI usage
 
@@ -62,11 +62,11 @@ project/
 │   │   ├── task-1.md      # Individual task files
 │   │   └── task-2.md
 │   ├── docs/              # Documentation directory
-│   │   ├── prd.txt        # Product requirements
+│   │   ├── prd.md        # Product requirements
 │   ├── reports/           # Analysis reports directory
 │   │   └── task-complexity-report.json
 │   ├── templates/         # Template files
-│   │   └── example_prd.txt  # Example PRD template
+│   │   └── example_prd.md  # Example PRD template
 │   └── config.json        # AI models & settings
 ├── .claude/
 │   ├── settings.json      # Claude Code configuration
@@ -139,7 +139,7 @@ complexity_report; // = task-master complexity-report
 task-master init
 
 # Create or obtain PRD, then parse it
-task-master parse-prd .taskmaster/default/docs/prd.txt
+task-master parse-prd .taskmaster/default/docs/prd.md
 
 # Analyze complexity and expand tasks
 task-master analyze-complexity --research

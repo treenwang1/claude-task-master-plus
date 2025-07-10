@@ -10,7 +10,9 @@ import {
 	readJSON,
 	writeJSON,
 	truncate,
-	isSilentMode
+	isSilentMode,
+	findProjectRoot,
+	parseJson
 } from '../utils.js';
 
 import {
@@ -258,7 +260,7 @@ async function updateTaskById(
 	outputFormat = 'text',
 	normalAttributes = {}
 ) {
-	const { session, mcpLog, projectRoot } = context;
+	const { session, mcpLog, projectRoot } = {projectRoot: findProjectRoot(path.dirname(tasksPath)), ...context };
 	const logFn = mcpLog || consoleLog;
 	const isMCP = !!mcpLog;
 
@@ -455,7 +457,7 @@ The changes described in the prompt should be thoughtfully applied to make the t
 
 				let updatedTaskObj = null;
 				try {
-					updatedTaskObj = JSON.parse(aiServiceResponse.mainResult);
+					updatedTaskObj = parseJson(aiServiceResponse.mainResult);
 				} catch (parseErr) {
 					throw new Error('Failed to parse AI response as valid JSON.');
 				}

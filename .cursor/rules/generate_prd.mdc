@@ -1,0 +1,17 @@
+---
+description: When generating prd is requested
+globs: 
+alwaysApply: false
+---
+# Product Requirements Document (PRD) Guidelines
+
+>**Note:** Get the value of `global.workingTaskGroup` in `.taskmaster/config.json` file as `currentTaskGroup`, replace all values below when meet `${currentTaskGroup}` below.
+
+Generate a comprehensive Software Product Requirements Document into `.taskmaster/${currentTaskGroup}/docs/prd.md` based on the document `.taskmaster/${currentTaskGroup}/templates/prd_template.yaml`.
+
+Expand each with detailed technical specifications, include user stories and acceptance criteria where appropriate, add technical architecture diagrams descriptions, and ensure the document is actionable for a software development team.
+
+
+**Rules:**
+- Check if Context7 MCP server is running. If Context7 MCP server is not running, you should stop and ask me to enable it.
+- For all software tools and libraries listed in `.taskmaster/${currentTaskGroup}/templates/prd_template.yaml` you need to get the latest version by Context7 MCP and write into `.taskmaster/${currentTaskGroup}/docs/prd.md`. And write all versions into `.cursor/rules/context.mdc` as cursor rule `alwaysApply: true`.

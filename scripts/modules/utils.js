@@ -28,7 +28,7 @@ let silentMode = false;
  */
 function findProjectRoot(
 	startDir = process.cwd(),
-	markers = ['package.json', '.git', LEGACY_CONFIG_FILE]
+	markers = ['package.json', '.git', '.taskmaster', LEGACY_CONFIG_FILE]
 ) {
 	let currentPath = path.resolve(startDir);
 	const rootPath = path.parse(currentPath).root;
@@ -146,6 +146,25 @@ function log(level, ...args) {
 			.map((arg) => (typeof arg === 'object' ? JSON.stringify(arg) : arg))
 			.join(' ');
 		console.log(`${prefix} ${message}`);
+	}
+}
+
+/**
+ * Parses a JSON string, if the string is markdown json, it will remove the markdown code block and parse the json
+ * @param {string} text - The JSON string to parse
+ * @returns {Object|null} The parsed JSON object or null if parsing fails
+ */
+function parseJson(text) {
+	try {
+		text = text.trim();
+		// If the string is markdown json, it will remove the markdown code block and parse the json
+		if (text.startsWith('```json') && text.endsWith('```')) {
+			text = text.substring(7, text.length - 3);
+		}
+		return JSON.parse(text);
+	} catch (error) {
+		log('error', `Error parsing JSON: ${error.message}`);
+		throw error;
 	}
 }
 
@@ -691,6 +710,144 @@ function shiftTaskIds(tasks, insertPosition) {
 }
 
 /**
+ * Regenerates sequential task IDs from 1 to N and updates all dependency references
+ * Also makes subtask IDs sequential integers (1, 2, 3, etc.) within each parent task
+ * @param {Array} tasks - Array of all tasks
+ * @returns {Array} Updated tasks array with sequential IDs starting from 1
+ */
+function regenerateSequentialTaskIds(tasks) {
+	if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
+		return tasks;
+	}
+
+	// Sort tasks to maintain a consistent order (by current ID)
+	const sortedTasks = [...tasks].sort((a, b) => a.id - b.id);
+	
+	// Create mapping for task IDs: old task ID -> new task ID
+	const taskIdMapping = new Map();
+	
+	// Create mapping for subtask IDs: "oldParentId.oldSubtaskId" -> "newParentId.newSubtaskId"
+	const subtaskIdMapping = new Map();
+	
+	// Build the task ID mapping - assign new sequential IDs starting from 1
+	sortedTasks.forEach((task, index) => {
+		const newTaskId = index + 1;
+		taskIdMapping.set(task.id, newTaskId);
+		
+		// If task has subtasks, create sequential subtask IDs
+		if (task.subtasks && task.subtasks.length > 0) {
+			// Sort subtasks by their current ID to maintain order
+			const sortedSubtasks = [...task.subtasks].sort((a, b) => a.id - b.id);
+			
+			sortedSubtasks.forEach((subtask, subtaskIndex) => {
+				const newSubtaskId = subtaskIndex + 1;
+				const oldSubtaskKey = `${task.id}.${subtask.id}`;
+				const newSubtaskKey = `${newTaskId}.${newSubtaskId}`;
+				subtaskIdMapping.set(oldSubtaskKey, newSubtaskKey);
+			});
+		}
+	});
+	
+	// First pass: update task IDs and subtask IDs
+	const updatedTasks = sortedTasks.map((task, index) => {
+		const newTaskId = index + 1;
+		const updatedTask = {
+			...task,
+			id: newTaskId
+		};
+		
+		// Update subtasks if they exist
+		if (task.subtasks && task.subtasks.length > 0) {
+			// Sort subtasks by their current ID to maintain order
+			const sortedSubtasks = [...task.subtasks].sort((a, b) => a.id - b.id);
+			
+			updatedTask.subtasks = sortedSubtasks.map((subtask, subtaskIndex) => ({
+				...subtask,
+				id: subtaskIndex + 1  // Sequential subtask IDs: 1, 2, 3, etc.
+			}));
+		}
+		
+		return updatedTask;
+	});
+	
+	// Second pass: update all dependency references
+	const finalTasks = updatedTasks.map(task => {
+		const updatedTask = { ...task };
+		
+		// Update main task dependencies
+		if (task.dependencies && task.dependencies.length > 0) {
+			updatedTask.dependencies = task.dependencies.map(depId => {
+				const newDepId = taskIdMapping.get(depId);
+				if (newDepId === undefined) {
+					// This dependency doesn't exist in the current task list
+					log('warn', `Dependency reference to non-existent task ${depId} found and removed`);
+					return null;
+				}
+				return newDepId;
+			}).filter(depId => depId !== null);
+		}
+		
+		// Update subtask dependencies
+		if (task.subtasks && task.subtasks.length > 0) {
+			updatedTask.subtasks = task.subtasks.map((subtask, subtaskIndex) => {
+				const updatedSubtask = { ...subtask };
+				
+				if (subtask.dependencies && subtask.dependencies.length > 0) {
+					updatedSubtask.dependencies = subtask.dependencies.map(depId => {
+						// Check if it's a task dependency (whole number) or subtask dependency (decimal)
+						if (Number.isInteger(depId)) {
+							// Task dependency - map to new task ID
+							const newDepId = taskIdMapping.get(depId);
+							if (newDepId === undefined) {
+								// This dependency doesn't exist
+								log('warn', `Subtask dependency reference to non-existent task ${depId} found and removed`);
+								return null;
+							}
+							return newDepId;
+						} else {
+							// Subtask dependency (e.g., 1.2) - need to map both parent and subtask IDs
+							const depString = depId.toString();
+							const [oldParentId, oldSubtaskId] = depString.split('.').map(Number);
+							
+							// Find the original subtask mapping key
+							const oldSubtaskKey = `${oldParentId}.${oldSubtaskId}`;
+							const newSubtaskKey = subtaskIdMapping.get(oldSubtaskKey);
+							
+							if (newSubtaskKey === undefined) {
+								// This subtask dependency doesn't exist
+								log('warn', `Subtask dependency reference to non-existent subtask ${depString} found and removed`);
+								return null;
+							}
+							
+							// Parse the new subtask key and return as float
+							const [newParentId, newSubtaskId] = newSubtaskKey.split('.').map(Number);
+							return parseFloat(`${newParentId}.${newSubtaskId}`);
+						}
+					}).filter(depId => depId !== null);
+				}
+				
+				return updatedSubtask;
+			});
+		}
+		
+		return updatedTask;
+	});
+	
+	return finalTasks;
+}
+
+/**
+ * Rewrites sequential task IDs in a task file
+ * @param {string} task_file_path - Path to the task file
+ */
+function rewriteSequentialTaskIds(task_file_path) {
+	const taskObject = readJSON(task_file_path);
+	const updatedTasks = regenerateSequentialTaskIds(taskObject?.tasks);
+	writeJSON(task_file_path, { tasks: updatedTasks });
+	return updatedTasks;
+}
+
+/**
  * Updates task IDs and all references when a task is removed, compacting the ID sequence
  * @param {Array} tasks - Array of all tasks
  * @param {Array} removedTaskIds - Array of task IDs that were removed (numbers only, not subtask IDs)
@@ -792,6 +949,7 @@ function compactTaskIds(tasks, removedTaskIds) {
 export {
 	LOG_LEVELS,
 	log,
+	parseJson,
 	readJSON,
 	writeJSON,
 	sanitizePrompt,
@@ -812,5 +970,7 @@ export {
 	findProjectRoot,
 	aggregateTelemetry,
 	shiftTaskIds,
-	compactTaskIds
+	compactTaskIds,
+	regenerateSequentialTaskIds,
+	rewriteSequentialTaskIds
 };

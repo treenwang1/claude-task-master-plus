@@ -38,11 +38,11 @@ export function getTaskGroupComplexityReportFile(taskGroupName) {
 }
 
 export function getTaskGroupPrdFile(taskGroupName) {
-	return `${TASKMASTER_DIR}/${taskGroupName}/docs/prd.txt`;
+	return `${TASKMASTER_DIR}/${taskGroupName}/docs/prd.md`;
 }
 
 export function getTaskGroupExamplePrdFile(taskGroupName) {
-	return `${TASKMASTER_DIR}/${taskGroupName}/templates/example_prd.txt`;
+	return `${TASKMASTER_DIR}/${taskGroupName}/templates/example_prd.md`;
 }
 
 // Task Master configuration files
@@ -55,13 +55,13 @@ export const LEGACY_COMPLEXITY_REPORT_FILE =
 
 // Task Master PRD file paths (legacy paths for backwards compatibility)
 export let PRD_FILE;
-export const LEGACY_PRD_FILE = 'scripts/prd.txt';
+export const LEGACY_PRD_FILE = 'scripts/prd.md';
 
 export let TASKMASTER_DOCS_DIR;
 
 // Task Master template files (legacy paths for backwards compatibility)
 export let EXAMPLE_PRD_FILE;
-export const LEGACY_EXAMPLE_PRD_FILE = 'scripts/example_prd.txt';
+export const LEGACY_EXAMPLE_PRD_FILE = 'scripts/example_prd.md';
 
 // Task Master task file paths (legacy paths for backwards compatibility)
 export let TASKMASTER_TASKS_FILE;
@@ -86,8 +86,8 @@ setDefaultTaskGroup(DEFAULT_TASK_GROUP);
 export function setDefaultTaskGroup(taskGroupName) {
 	DEFAULT_TASK_GROUP = taskGroupName;
 	COMPLEXITY_REPORT_FILE = `.taskmaster/${DEFAULT_TASK_GROUP}/reports/task-complexity-report.json`;
-	PRD_FILE = `.taskmaster/${DEFAULT_TASK_GROUP}/docs/prd.txt`;
-	EXAMPLE_PRD_FILE = `.taskmaster/${DEFAULT_TASK_GROUP}/templates/example_prd.txt`;
+	PRD_FILE = `.taskmaster/${DEFAULT_TASK_GROUP}/docs/prd.md`;
+	EXAMPLE_PRD_FILE = `.taskmaster/${DEFAULT_TASK_GROUP}/templates/example_prd.md`;
 	TASKMASTER_TASKS_FILE = `.taskmaster/${DEFAULT_TASK_GROUP}/tasks/tasks.json`;
 	TASKMASTER_DOCS_DIR = `.taskmaster/${DEFAULT_TASK_GROUP}/docs`;
 }
