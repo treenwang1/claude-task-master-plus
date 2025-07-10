@@ -69,6 +69,12 @@ const DEFAULTS = {
 		defaultSubtasks: 5,
 		defaultPriority: 'medium',
 		projectName: 'Task Master',
+		defaultFlow: [
+			{"status": "pending", "executor": "agent"}, 
+			{"status": "in-progress", "executor": "agent"}, 
+			{"status": "review", "executor": "agent"}, 
+			{"status": "review", "executor": "human"}
+		],
 		ollamaBaseURL: 'http://localhost:11434/api',
 		bedrockBaseURL: 'https://bedrock.us-east-1.amazonaws.com'
 	}
@@ -378,6 +384,11 @@ function getDefaultPriority(explicitRoot = null) {
 function getProjectName(explicitRoot = null) {
 	// Directly return value from config
 	return getGlobalConfig(explicitRoot).projectName;
+}
+
+function getDefaultFlow(explicitRoot = null) {
+	// Directly return value from config with fallback to defaults
+	return getGlobalConfig(explicitRoot).defaultFlow || DEFAULTS.global.defaultFlow;
 }
 
 function getOllamaBaseURL(explicitRoot = null) {
@@ -927,6 +938,7 @@ export {
 	getDefaultSubtasks,
 	getDefaultPriority,
 	getProjectName,
+	getDefaultFlow,
 	getOllamaBaseURL,
 	getAzureBaseURL,
 	getBedrockBaseURL,

@@ -139,6 +139,12 @@ const DEFAULT_CONFIG = {
 		defaultSubtasks: 5,
 		defaultPriority: 'medium',
 		projectName: 'Task Master',
+		defaultFlow: [
+			{"status": "pending", "executor": "agent"}, 
+			{"status": "in-progress", "executor": "agent"}, 
+			{"status": "review", "executor": "agent"}, 
+			{"status": "review", "executor": "human"}
+		],
 		ollamaBaseURL: 'http://localhost:11434/api',
 		bedrockBaseURL: 'https://bedrock.us-east-1.amazonaws.com'
 	}
@@ -681,6 +687,38 @@ describe('Getter Functions', () => {
 
 		// Assert
 		expect(logLevel).toBe(VALID_CUSTOM_CONFIG.global.logLevel);
+	});
+
+	test('getDefaultFlow should return defaultFlow from config', () => {
+		// Arrange: Use defaults since VALID_CUSTOM_CONFIG doesn't have defaultFlow
+		fsReadFileSyncSpy.mockImplementation((filePath) => {
+			if (filePath === MOCK_CONFIG_PATH)
+				return JSON.stringify(DEFAULT_CONFIG);
+			if (path.basename(filePath) === 'supported-models.json') {
+				return JSON.stringify({
+					anthropic: [
+						{ id: 'claude-3-7-sonnet-20250219' },
+						{ id: 'claude-3-5-sonnet' }
+					],
+					perplexity: [{ id: 'sonar-pro' }],
+					ollama: [],
+					openrouter: []
+				});
+			}
+			throw new Error(`Unexpected fs.readFileSync call: ${filePath}`);
+		});
+		fsExistsSyncSpy.mockReturnValue(true);
+
+		// Act
+		const defaultFlow = configManager.getDefaultFlow(MOCK_PROJECT_ROOT);
+
+		// Assert
+		expect(Array.isArray(defaultFlow)).toBe(true);
+		expect(defaultFlow).toHaveLength(4);
+		expect(defaultFlow[0]).toEqual({"status": "pending", "executor": "agent"});
+		expect(defaultFlow[1]).toEqual({"status": "in-progress", "executor": "agent"});
+		expect(defaultFlow[2]).toEqual({"status": "review", "executor": "agent"});
+		expect(defaultFlow[3]).toEqual({"status": "review", "executor": "human"});
 	});
 
 	// Add more tests for other getters (getResearchProvider, getProjectName, etc.)

@@ -18,7 +18,7 @@ import {
  * @param {string} tasksPath - Path to the tasks.json file
  * @param {string} taskIdInput - Task ID(s) to update
  * @param {string} newStatus - New status
- * @param {Object} options - Additional options (mcpLog for MCP mode)
+ * @param {Object} options - Additional options (mcpLog for MCP mode, executor for setting executor)
  * @returns {Object|undefined} Result object in MCP mode, undefined in CLI mode
  */
 async function setTaskStatus(tasksPath, taskIdInput, newStatus, options = {}) {
@@ -54,7 +54,7 @@ async function setTaskStatus(tasksPath, taskIdInput, newStatus, options = {}) {
 
 		// Update each task
 		for (const id of taskIds) {
-			await updateSingleTaskStatus(tasksPath, id, newStatus, data, !isMcpMode);
+			await updateSingleTaskStatus(tasksPath, id, newStatus, data, !isMcpMode, options.executor);
 			updatedTasks.push(id);
 		}
 

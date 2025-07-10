@@ -38,6 +38,12 @@ export function registerSetTaskStatusTool(server) {
 				.describe(
 					"New status to set (e.g., 'pending', 'done', 'in-progress', 'review', 'deferred', 'cancelled'."
 				),
+			executor: z
+				.enum(['agent', 'human'])
+				.optional()
+				.describe(
+					"Optionally set the executor for the task (agent or human). Useful when setting status to 'review'."
+				),
 			file: z.string().optional().describe('Absolute path to the tasks file'),
 			complexityReport: z
 				.string()
@@ -85,6 +91,7 @@ export function registerSetTaskStatusTool(server) {
 						tasksJsonPath: tasksJsonPath,
 						id: args.id,
 						status: args.status,
+						executor: args.executor,
 						complexityReportPath
 					},
 					log

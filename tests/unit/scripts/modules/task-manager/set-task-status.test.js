@@ -170,7 +170,7 @@ describe('setTaskStatus', () => {
 
 		// Set up updateSingleTaskStatus mock to actually update the data
 		updateSingleTaskStatus.mockImplementation(
-			async (tasksPath, taskId, newStatus, data) => {
+			async (tasksPath, taskId, newStatus, data, showUi, executor) => {
 				// Handle subtask notation (e.g., "3.1")
 				if (taskId.includes('.')) {
 					const [parentId, subtaskId] = taskId
@@ -190,6 +190,9 @@ describe('setTaskStatus', () => {
 						);
 					}
 					subtask.status = newStatus;
+					if (executor) {
+						subtask.executor = executor;
+					}
 				} else {
 					// Handle regular task
 					const task = data.tasks.find((t) => t.id === parseInt(taskId, 10));
@@ -197,6 +200,9 @@ describe('setTaskStatus', () => {
 						throw new Error(`Task ${taskId} not found`);
 					}
 					task.status = newStatus;
+					if (executor) {
+						task.executor = executor;
+					}
 
 					// If marking parent as done, mark all subtasks as done too
 					if (newStatus === 'done' && task.subtasks) {
@@ -443,22 +449,61 @@ describe('setTaskStatus', () => {
 			'1',
 			newStatus,
 			testTasksData,
-			false
+			false,
+			undefined
 		);
 		expect(updateSingleTaskStatus).toHaveBeenCalledWith(
 			tasksPath,
 			'2',
 			newStatus,
 			testTasksData,
-			false
+			false,
+			undefined
 		);
 		expect(updateSingleTaskStatus).toHaveBeenCalledWith(
 			tasksPath,
 			'3',
 			newStatus,
 			testTasksData,
-			false
+			false,
+			undefined
 		);
 		expect(result).toBeDefined();
+	});
+
+	test('should set executor when provided', async () => {
+		// Arrange
+		const testTasksData = JSON.parse(JSON.stringify(sampleTasks));
+		const tasksPath = '/mock/path/tasks.json';
+
+		readJSON.mockReturnValue(testTasksData);
+
+		// Act
+		await setTaskStatus(tasksPath, '2', 'review', { 
+			mcpLog: { info: jest.fn() },
+			executor: 'human'
+		});
+
+		// Assert
+		expect(updateSingleTaskStatus).toHaveBeenCalledWith(
+			tasksPath,
+			'2',
+			'review',
+			testTasksData,
+			false,
+			'human'
+		);
+		expect(writeJSON).toHaveBeenCalledWith(
+			tasksPath,
+			expect.objectContaining({
+				tasks: expect.arrayContaining([
+					expect.objectContaining({ 
+						id: 2, 
+						status: 'review',
+						executor: 'human'
+					})
+				])
+			})
+		);
 	});
 });

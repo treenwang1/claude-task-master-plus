@@ -10,13 +10,15 @@ import { isValidTaskStatus } from '../../../src/constants/task-status.js';
  * @param {string} newStatus - New status
  * @param {Object} data - Tasks data
  * @param {boolean} showUi - Whether to show UI elements
+ * @param {string} executor - Optional executor to set (agent or human)
  */
 async function updateSingleTaskStatus(
 	tasksPath,
 	taskIdInput,
 	newStatus,
 	data,
-	showUi = true
+	showUi = true,
+	executor = null
 ) {
 	if (!isValidTaskStatus(newStatus)) {
 		throw new Error(
@@ -52,9 +54,14 @@ async function updateSingleTaskStatus(
 		const oldStatus = subtask.status || 'pending';
 		subtask.status = newStatus;
 
+		// Update executor if provided
+		if (executor) {
+			subtask.executor = executor;
+		}
+
 		log(
 			'info',
-			`Updated subtask ${parentId}.${subtaskId} status from '${oldStatus}' to '${newStatus}'`
+			`Updated subtask ${parentId}.${subtaskId} status from '${oldStatus}' to '${newStatus}'${executor ? ` with executor '${executor}'` : ''}`
 		);
 
 		// Check if all subtasks are done (if setting to 'done')
@@ -100,9 +107,14 @@ async function updateSingleTaskStatus(
 		const oldStatus = task.status || 'pending';
 		task.status = newStatus;
 
+		// Update executor if provided
+		if (executor) {
+			task.executor = executor;
+		}
+
 		log(
 			'info',
-			`Updated task ${taskId} status from '${oldStatus}' to '${newStatus}'`
+			`Updated task ${taskId} status from '${oldStatus}' to '${newStatus}'${executor ? ` with executor '${executor}'` : ''}`
 		);
 
 		// If marking as done, also mark all subtasks as done

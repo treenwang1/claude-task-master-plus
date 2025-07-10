@@ -1318,6 +1318,10 @@ function registerCommands(programInstance) {
 			`New status (one of: ${TASK_STATUS_OPTIONS.join(', ')})`
 		)
 		.option(
+			'-e, --executor <executor>',
+			'Set executor for the task (agent or human)'
+		)
+		.option(
 			'-f, --file <file>',
 			'Path to the tasks file',
 			TASKMASTER_TASKS_FILE
@@ -1326,6 +1330,7 @@ function registerCommands(programInstance) {
 			const tasksPath = options.file || TASKMASTER_TASKS_FILE;
 			const taskId = options.id;
 			const status = options.status;
+			const executor = options.executor;
 
 			if (!taskId || !status) {
 				console.error(chalk.red('Error: Both --id and --status are required'));
@@ -1342,11 +1347,25 @@ function registerCommands(programInstance) {
 				process.exit(1);
 			}
 
+			// Validate executor if provided
+			if (executor && !['agent', 'human'].includes(executor)) {
+				console.error(
+					chalk.red(
+						`Error: Invalid executor "${executor}". Must be either "agent" or "human".`
+					)
+				);
+				process.exit(1);
+			}
+
 			console.log(
 				chalk.blue(`Setting status of task(s) ${taskId} to: ${status}`)
 			);
 
-			await setTaskStatus(tasksPath, taskId, status);
+			if (executor) {
+				console.log(chalk.blue(`Setting executor to: ${executor}`));
+			}
+
+			await setTaskStatus(tasksPath, taskId, status, { executor });
 		});
 
 	// list command

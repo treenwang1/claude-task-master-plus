@@ -39,15 +39,20 @@ Task Master offers two primary ways to interact:
 -   Break down complex tasks using `expand_task` / `task-master expand --id=<id> --force --research` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)) with appropriate flags like `--force` (to replace existing subtasks) and `--research`.
 -   Clear existing subtasks if needed using `clear_subtasks` / `task-master clear-subtasks --id=<id>` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)) before regenerating
 -   Implement code following task details, dependencies, and project standards
+-   Set task status to 'in-progress' using `set_task_status` / `task-master set-status --id=<id> --status=in-progress` when beginning work
+-   Move tasks through the configured workflow stages (pending → in-progress → review → done)
+-   For AI/agent completed tasks, set status to 'review' with `executor=agent` for initial verification
+-   For tasks requiring human validation, move to 'review' status with `executor=human`
 -   Verify tasks according to test strategies before marking as complete (See [`tests.mdc`](mdc:.cursor/rules/tests.mdc))
--   Mark completed tasks with `set_task_status` / `task-master set-status --id=<id> --status=done` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc))
+-   Mark fully completed and verified tasks with `set_task_status` / `task-master set-status --id=<id> --status=done` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc))
 -   Update dependent tasks when implementation differs from original plan using `update` / `task-master update --from=<id> --prompt="..."` or `update_task` / `task-master update-task --id=<id> --prompt="..."` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc))
 -   Add new tasks discovered during implementation using `add_task` / `task-master add-task --prompt="..." --research` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)).
 -   Add new subtasks as needed using `add_subtask` / `task-master add-subtask --parent=<id> --title="..."` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)).
 -   Append notes or details to subtasks using `update_subtask` / `task-master update-subtask --id=<subtaskId> --prompt='Add implementation notes here...\nMore details...'` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)).
 -   Generate task files with `generate` / `task-master generate` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)) after updating tasks.json
 -   Maintain valid dependency structure with `add_dependency`/`remove_dependency` tools or `task-master add-dependency`/`remove-dependency` commands, `validate_dependencies` / `task-master validate-dependencies`, and `fix_dependencies` / `task-master fix-dependencies` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)) when needed
--   Respect dependency chains and task priorities when selecting work. If user chose a task but any of it's dependency tasks aren't finished, you should stop and ask user to finishe all dependency tasks.
+-    Before executing a task, verify all dependency tasks are marked as 'done'. If not, ask the user to complete dependencies first.
+-   Respect dependency chains and task priorities when selecting work.
 -   Report progress regularly using `get_tasks` / `task-master list`
 -   Reorganize tasks as needed using `move_task` / `task-master move --from=<id> --to=<id>` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)) to change task hierarchy or ordering
 
@@ -80,10 +85,21 @@ Task Master offers two primary ways to interact:
 
 ## Task Status Management
 
--   Use 'pending' for tasks ready to be worked on
--   Use 'done' for completed and verified tasks
--   Use 'deferred' for postponed tasks
--   Add custom status values as needed for project-specific workflows
+### Default Task Flow
+
+Taskmaster supports configurable task flow states through the `defaultFlow` setting in `.taskmaster/config.json`.
+**important rule:** The task status update should always consider the `defaultFlow` value. If the current values of task.status and task.executor matches value in `defaultFlow`(`*` matches and value), you should find the next status of `defaultFlow` and update it using `set_task_status` / `task-master set-status --id=<taskId> --status={defaultFlow.nextItem.status} --executor="{defaultFlow.nextItem.executor}"`.
+
+### Status Usage Guidelines
+
+-   **'pending'**: New tasks or tasks with all dependencies satisfied, ready for work
+-   **'in-progress'**: Tasks actively being implemented (limit to 1-2 tasks per developer)
+-   **'review'**: Tasks completed and awaiting verification. Use `executor` field to specify reviewer type:
+    - Tasks with `status="review"` and `executor="agent"` are completed by AI/agent awaiting verification
+    - Tasks with `status="review"` and `executor="human"` require manual validation, testing, or approval
+-   **'done'**: Fully completed, tested, and accepted tasks
+-   **'deferred'**: Postponed tasks (not part of active flow)
+-   **Custom statuses**: Add project-specific workflow states as needed (e.g., 'blocked', 'testing', 'deployed')
 
 ## Task Structure Fields
 
@@ -110,9 +126,10 @@ Taskmaster configuration is managed through two main mechanisms:
 
 1.  **`.taskmaster/config.json` File (Primary):**
     *   Located in the project root directory.
-    *   Stores most configuration settings: AI model selections (main, research, fallback), parameters (max tokens, temperature), logging level, default subtasks/priority, project name, etc.
+    *   Stores most configuration settings: AI model selections (main, research, fallback), parameters (max tokens, temperature), logging level, default subtasks/priority, project name, defaultFlow workflow states, etc.
     *   **Managed via `task-master models --setup` command.** Do not edit manually unless you know what you are doing.
     *   **View/Set specific models via `task-master models` command or `models` MCP tool.**
+    *   **Configure workflow states** by editing the `defaultFlow` array in the `global` section.
     *   Created automatically when you run `task-master models --setup` for the first time.
 
 2.  **Environment Variables (`.env` / `mcp.json`):**
@@ -128,8 +145,13 @@ Taskmaster configuration is managed through two main mechanisms:
 ## Determining the Next Task
 
 - Run `next_task` / `task-master next` to show the next task to work on.
-- The command identifies tasks with all dependencies satisfied
+- The command identifies tasks with all dependencies satisfied and appropriate status
 - Tasks are prioritized by priority level, dependency count, and ID
+- Consider the configured workflow states when selecting tasks:
+  - **'pending'** tasks are ready for implementation
+  - **'in-progress'** tasks are currently being worked on (limit active work)
+  - **'review'** tasks await verification before completion (check `executor` field for reviewer type)
+  - **'done'** tasks are complete and can satisfy dependencies for other tasks
 - The command shows comprehensive task information including:
     - Basic task details and description
     - Implementation details
@@ -219,8 +241,10 @@ Once a task has been broken down into subtasks using `expand_task` or similar me
     *   Identify any new or modified code patterns, conventions, or best practices established during the implementation.
     *   Create new or update existing rules following internal guidelines (previously linked to `cursor_rules.mdc` and `self_improve.mdc`).
 
-8.  **Mark Task Complete:**
-    *   After verifying the implementation and updating any necessary rules, mark the subtask as completed: `set_task_status` / `task-master set-status --id=<subtaskId> --status=done`.
+8.  **Progress Through Workflow:**
+    *   For AI/agent completed implementation, set status to 'review' with agent executor: `set_task_status` / `task-master set-status --id=<subtaskId> --status=review --executor=agent`
+    *   For tasks requiring human validation or approval, set status to 'review' with human executor: `set_task_status` / `task-master set-status --id=<subtaskId> --status=review --executor=human`
+    *   After verifying the implementation and updating any necessary rules, mark the subtask as completed: `set_task_status` / `task-master set-status --id=<subtaskId> --status=done`
 
 9.  **Commit Changes (If using Git):**
     *   Stage the relevant code changes and any updated/new rule files (`git add .`).

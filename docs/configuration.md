@@ -39,6 +39,12 @@ Taskmaster uses two primary methods for configuration:
           "defaultSubtasks": 5,
           "defaultPriority": "medium",
           "projectName": "Your Project Name",
+          "defaultFlow": [
+            {"status": "pending", "executor": "agent"}, 
+            {"status": "in-progress", "executor": "agent"}, 
+            {"status": "review", "executor": "agent"}, 
+            {"status": "review", "executor": "human"}
+          ],
           "ollamaBaseURL": "http://localhost:11434/api",
           "azureBaseURL": "https://your-endpoint.azure.com/",
           "vertexProjectId": "your-gcp-project-id",
@@ -77,7 +83,51 @@ Taskmaster uses two primary methods for configuration:
   - `VERTEX_LOCATION`: Google Cloud region for Vertex AI (e.g., 'us-central1'). Default is 'us-central1'.
   - `GOOGLE_APPLICATION_CREDENTIALS`: Path to service account credentials JSON file for Google Cloud auth (alternative to API key for Vertex AI).
 
-**Important:** Settings like model ID selections (`main`, `research`, `fallback`), `maxTokens`, `temperature`, `logLevel`, `defaultSubtasks`, `defaultPriority`, and `projectName` are **managed in `.taskmaster/config.json`** (or `.taskmasterconfig` for unmigrated projects), not environment variables.
+**Important:** Settings like model ID selections (`main`, `research`, `fallback`), `maxTokens`, `temperature`, `logLevel`, `defaultSubtasks`, `defaultPriority`, `defaultFlow`, and `projectName` are **managed in `.taskmaster/config.json`** (or `.taskmasterconfig` for unmigrated projects), not environment variables.
+
+## Workflow Configuration
+
+### Default Task Flow
+
+Taskmaster supports configurable task workflow states through the `defaultFlow` setting in the `global` section of your configuration. This provides a standard progression for tasks through your development workflow.
+
+**Default Flow:** `["pending", "in-progress", "review", "done"]`
+
+- **pending**: Tasks ready to be worked on
+- **in-progress**: Tasks currently being implemented  
+- **review**: Tasks completed and awaiting verification (use `executor` field to specify reviewer type)
+- **done**: Fully completed and verified tasks
+
+**Custom Workflow Example:**
+```json
+{
+  "global": {
+    "defaultFlow": ["backlog", "ready", "doing", "testing", "review", "done", "deployed"]
+  }
+}
+```
+
+**Usage Notes:**
+- The `defaultFlow` provides guidance but doesn't restrict status values
+- Tasks can use any status values (including custom ones like 'blocked', 'deferred')
+- The flow serves as a recommended progression for typical task lifecycle
+- Workflow states help organize task management and team coordination
+
+### Review Status and Executor Field
+
+The `review` status is designed to work with the `executor` field to distinguish between different types of reviews:
+
+- **Agent Review**: `status="review"` with `executor="agent"` - Tasks completed by AI/agents awaiting verification
+- **Human Review**: `status="review"` with `executor="human"` - Tasks requiring human validation or approval
+
+Use the set-status command with executor parameter:
+```bash
+# Set task for agent review
+task-master set-status --id=5 --status=review --executor=agent
+
+# Set task for human review  
+task-master set-status --id=5 --status=review --executor=human
+```
 
 ## Example `.env` File (for API Keys)
 

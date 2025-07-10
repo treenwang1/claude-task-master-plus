@@ -85,6 +85,12 @@ const DEFAULT_CONFIG = {
 		defaultSubtasks: 5,
 		defaultPriority: 'medium',
 		projectName: 'Task Master',
+		defaultFlow: [
+			{"status": "pending", "executor": "agent"}, 
+			{"status": "in-progress", "executor": "agent"}, 
+			{"status": "review", "executor": "agent"}, 
+			{"status": "review", "executor": "human"}
+		],
 		ollamaBaseURL: 'http://localhost:11434/api'
 	}
 };
