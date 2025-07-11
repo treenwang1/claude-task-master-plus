@@ -154,7 +154,7 @@ async function addDependency(tasksPath, taskId, dependencyId) {
 		!isCircularDependency(data.tasks, formattedDependencyId, dependencyChain)
 	) {
 		// Add the dependency
-		targetTask.dependencies.push(formattedDependencyId);
+		targetTask.dependencies.push(formattedDependencyId.includes('.') ? formattedDependencyId : parseInt(formattedDependencyId, 10));
 
 		// Sort dependencies numerically or by parent task ID first, then subtask ID
 		targetTask.dependencies.sort((a, b) => {
@@ -282,7 +282,7 @@ async function removeDependency(tasksPath, taskId, dependencyId) {
 	const normalizedDependencyId = String(formattedDependencyId);
 
 	// Check if the dependency exists by comparing string representations
-	const dependencyIndex = targetTask.dependencies.findIndex((dep) => {
+	let dependencyIndex = targetTask.dependencies.findIndex((dep) => {
 		// Convert both to strings for comparison
 		let depStr = String(dep);
 

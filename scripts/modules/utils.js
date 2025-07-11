@@ -843,7 +843,7 @@ function regenerateSequentialTaskIds(tasks) {
 function rewriteSequentialTaskIds(task_file_path) {
 	const taskObject = readJSON(task_file_path);
 	const updatedTasks = regenerateSequentialTaskIds(taskObject?.tasks);
-	writeJSON(task_file_path, { tasks: updatedTasks });
+	writeJSON(task_file_path, { ...taskObject, tasks: updatedTasks });
 	return updatedTasks;
 }
 
