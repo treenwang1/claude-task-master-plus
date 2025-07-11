@@ -1857,7 +1857,11 @@ function registerCommands(programInstance) {
 				? dependencyId
 				: parseInt(dependencyId, 10);
 
-			await addDependency(tasksPath, formattedTaskId, formattedDependencyId);
+			const result = await addDependency(tasksPath, formattedTaskId, formattedDependencyId);
+			if (!result.success) {
+				console.error(chalk.red(`Error: ${result.message}`));
+				process.exit(1);
+			}
 		});
 
 	// remove-dependency command
@@ -1892,7 +1896,11 @@ function registerCommands(programInstance) {
 				? dependencyId
 				: parseInt(dependencyId, 10);
 
-			await removeDependency(tasksPath, formattedTaskId, formattedDependencyId);
+			const result = await removeDependency(tasksPath, formattedTaskId, formattedDependencyId);
+			if (!result.success) {
+				console.error(chalk.red(`Error: ${result.message}`));
+				process.exit(1);
+			}
 		});
 
 	// validate-dependencies command

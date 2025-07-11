@@ -76,20 +76,35 @@ export async function addDependencyDirect(args, log) {
 		// Enable silent mode to prevent console logs from interfering with JSON response
 		enableSilentMode();
 
-		// Call the core function using the provided path
-		await addDependency(tasksPath, taskId, dependencyId);
+		try {
+			// Call the core function using the provided path
+			const result = await addDependency(tasksPath, taskId, dependencyId);
 
-		// Restore normal logging
-		disableSilentMode();
+			// Restore normal logging
+			disableSilentMode();
 
-		return {
-			success: true,
-			data: {
-				message: `Successfully added dependency: Task ${taskId} now depends on ${dependencyId}`,
-				taskId: taskId,
-				dependencyId: dependencyId
+			if (!result.success) {
+				return {
+					success: false,
+					error: {
+						code: 'DEPENDENCY_ERROR',
+						message: result.message
+					}
+				};
 			}
-		};
+
+			return {
+				success: true,
+				data: {
+					message: result.message,
+					taskId: taskId,
+					dependencyId: dependencyId
+				}
+			};
+		} finally {
+			// Ensure silent mode is disabled even if an error occurs
+			disableSilentMode();
+		}
 	} catch (error) {
 		// Make sure to restore normal logging even if there's an error
 		disableSilentMode();

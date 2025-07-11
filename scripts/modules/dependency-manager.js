@@ -26,14 +26,16 @@ import { generateTaskFiles } from './task-manager.js';
  * @param {string} tasksPath - Path to the tasks.json file
  * @param {number|string} taskId - ID of the task to add dependency to
  * @param {number|string} dependencyId - ID of the task to add as dependency
+ * @returns {Promise<{success: boolean, message: string}>} Result of the operation
  */
 async function addDependency(tasksPath, taskId, dependencyId) {
 	log('info', `Adding dependency ${dependencyId} to task ${taskId}...`);
 
 	const data = readJSON(tasksPath);
 	if (!data || !data.tasks) {
-		log('error', 'No valid tasks found in tasks.json');
-		process.exit(1);
+		const message = 'No valid tasks found in tasks.json';
+		log('error', message);
+		return { success: false, message };
 	}
 
 	// Format the task and dependency IDs correctly
@@ -46,11 +48,9 @@ async function addDependency(tasksPath, taskId, dependencyId) {
 
 	// Check if the dependency task or subtask actually exists
 	if (!taskExists(data.tasks, formattedDependencyId)) {
-		log(
-			'error',
-			`Dependency target ${formattedDependencyId} does not exist in tasks.json`
-		);
-		process.exit(1);
+		const message = `Dependency target ${formattedDependencyId} does not exist in tasks.json`;
+		log('error', message);
+		return { success: false, message };
 	}
 
 	// Find the task to update
@@ -65,29 +65,33 @@ async function addDependency(tasksPath, taskId, dependencyId) {
 		const parentTask = data.tasks.find((t) => t.id === parentId);
 
 		if (!parentTask) {
-			log('error', `Parent task ${parentId} not found.`);
-			process.exit(1);
+			const message = `Parent task ${parentId} not found.`;
+			log('error', message);
+			return { success: false, message };
 		}
 
 		if (!parentTask.subtasks) {
-			log('error', `Parent task ${parentId} has no subtasks.`);
-			process.exit(1);
+			const message = `Parent task ${parentId} has no subtasks.`;
+			log('error', message);
+			return { success: false, message };
 		}
 
 		targetTask = parentTask.subtasks.find((s) => s.id === subtaskId);
 		isSubtask = true;
 
 		if (!targetTask) {
-			log('error', `Subtask ${formattedTaskId} not found.`);
-			process.exit(1);
+			const message = `Subtask ${formattedTaskId} not found.`;
+			log('error', message);
+			return { success: false, message };
 		}
 	} else {
 		// Regular task (not a subtask)
 		targetTask = data.tasks.find((t) => t.id === formattedTaskId);
 
 		if (!targetTask) {
-			log('error', `Task ${formattedTaskId} not found.`);
-			process.exit(1);
+			const message = `Task ${formattedTaskId} not found.`;
+			log('error', message);
+			return { success: false, message };
 		}
 	}
 
@@ -103,17 +107,16 @@ async function addDependency(tasksPath, taskId, dependencyId) {
 			return String(d) === String(formattedDependencyId);
 		})
 	) {
-		log(
-			'warn',
-			`Dependency ${formattedDependencyId} already exists in task ${formattedTaskId}.`
-		);
-		return;
+		const message = `Dependency ${formattedDependencyId} already exists in task ${formattedTaskId}.`;
+		log('warn', message);
+		return { success: false, message };
 	}
 
 	// Check if the task is trying to depend on itself - compare full IDs (including subtask parts)
 	if (String(formattedTaskId) === String(formattedDependencyId)) {
-		log('error', `Task ${formattedTaskId} cannot depend on itself.`);
-		process.exit(1);
+		const message = `Task ${formattedTaskId} cannot depend on itself.`;
+		log('error', message);
+		return { success: false, message };
 	}
 
 	// For subtasks of the same parent, we need to make sure we're not treating it as a self-dependency
@@ -144,8 +147,9 @@ async function addDependency(tasksPath, taskId, dependencyId) {
 	}
 
 	if (isSelfDependency) {
-		log('error', `Subtask ${formattedTaskId} cannot depend on itself.`);
-		process.exit(1);
+		const message = `Subtask ${formattedTaskId} cannot depend on itself.`;
+		log('error', message);
+		return { success: false, message };
 	}
 
 	// Check for circular dependencies
@@ -173,10 +177,8 @@ async function addDependency(tasksPath, taskId, dependencyId) {
 
 		// Save changes
 		writeJSON(tasksPath, data);
-		log(
-			'success',
-			`Added dependency ${formattedDependencyId} to task ${formattedTaskId}`
-		);
+		const message = `Added dependency ${formattedDependencyId} to task ${formattedTaskId}`;
+		log('success', message);
 
 		// Display a more visually appealing success message
 		if (!isSilentMode()) {
@@ -198,12 +200,11 @@ async function addDependency(tasksPath, taskId, dependencyId) {
 		await generateTaskFiles(tasksPath, path.dirname(tasksPath));
 
 		log('info', 'Task files regenerated with updated dependencies.');
+		return { success: true, message };
 	} else {
-		log(
-			'error',
-			`Cannot add dependency ${formattedDependencyId} to task ${formattedTaskId} as it would create a circular dependency.`
-		);
-		process.exit(1);
+		const message = `Cannot add dependency ${formattedDependencyId} to task ${formattedTaskId} as it would create a circular dependency.`;
+		log('error', message);
+		return { success: false, message };
 	}
 }
 
@@ -212,6 +213,7 @@ async function addDependency(tasksPath, taskId, dependencyId) {
  * @param {string} tasksPath - Path to the tasks.json file
  * @param {number|string} taskId - ID of the task to remove dependency from
  * @param {number|string} dependencyId - ID of the task to remove as dependency
+ * @returns {Promise<{success: boolean, message: string}>} Result of the operation
  */
 async function removeDependency(tasksPath, taskId, dependencyId) {
 	log('info', `Removing dependency ${dependencyId} from task ${taskId}...`);
@@ -219,8 +221,9 @@ async function removeDependency(tasksPath, taskId, dependencyId) {
 	// Read tasks file
 	const data = readJSON(tasksPath);
 	if (!data || !data.tasks) {
-		log('error', 'No valid tasks found.');
-		process.exit(1);
+		const message = 'No valid tasks found.';
+		log('error', message);
+		return { success: false, message };
 	}
 
 	// Format the task and dependency IDs correctly
@@ -243,39 +246,41 @@ async function removeDependency(tasksPath, taskId, dependencyId) {
 		const parentTask = data.tasks.find((t) => t.id === parentId);
 
 		if (!parentTask) {
-			log('error', `Parent task ${parentId} not found.`);
-			process.exit(1);
+			const message = `Parent task ${parentId} not found.`;
+			log('error', message);
+			return { success: false, message };
 		}
 
 		if (!parentTask.subtasks) {
-			log('error', `Parent task ${parentId} has no subtasks.`);
-			process.exit(1);
+			const message = `Parent task ${parentId} has no subtasks.`;
+			log('error', message);
+			return { success: false, message };
 		}
 
 		targetTask = parentTask.subtasks.find((s) => s.id === subtaskId);
 		isSubtask = true;
 
 		if (!targetTask) {
-			log('error', `Subtask ${formattedTaskId} not found.`);
-			process.exit(1);
+			const message = `Subtask ${formattedTaskId} not found.`;
+			log('error', message);
+			return { success: false, message };
 		}
 	} else {
 		// Regular task (not a subtask)
 		targetTask = data.tasks.find((t) => t.id === formattedTaskId);
 
 		if (!targetTask) {
-			log('error', `Task ${formattedTaskId} not found.`);
-			process.exit(1);
+			const message = `Task ${formattedTaskId} not found.`;
+			log('error', message);
+			return { success: false, message };
 		}
 	}
 
 	// Check if the task has any dependencies
 	if (!targetTask.dependencies || targetTask.dependencies.length === 0) {
-		log(
-			'info',
-			`Task ${formattedTaskId} has no dependencies, nothing to remove.`
-		);
-		return;
+		const message = `Task ${formattedTaskId} has no dependencies, nothing to remove.`;
+		log('info', message);
+		return { success: false, message };
 	}
 
 	// Normalize the dependency ID for comparison to handle different formats
@@ -305,11 +310,9 @@ async function removeDependency(tasksPath, taskId, dependencyId) {
 	}
 
 	if (dependencyIndex === -1) {
-		log(
-			'info',
-			`Task ${formattedTaskId} does not depend on ${formattedDependencyId}, no changes made.`
-		);
-		return;
+		const message = `Task ${formattedTaskId} does not depend on ${formattedDependencyId}, no changes made.`;
+		log('info', message);
+		return { success: false, message };
 	}
 
 	// Remove the dependency
@@ -319,10 +322,8 @@ async function removeDependency(tasksPath, taskId, dependencyId) {
 	writeJSON(tasksPath, data);
 
 	// Success message
-	log(
-		'success',
-		`Removed dependency: Task ${formattedTaskId} no longer depends on ${formattedDependencyId}`
-	);
+	const message = `Removed dependency: Task ${formattedTaskId} no longer depends on ${formattedDependencyId}`;
+	log('success', message);
 
 	if (!isSilentMode()) {
 		// Display a more visually appealing success message
@@ -342,6 +343,8 @@ async function removeDependency(tasksPath, taskId, dependencyId) {
 
 	// Regenerate task files
 	await generateTaskFiles(tasksPath, path.dirname(tasksPath));
+	
+	return { success: true, message };
 }
 
 /**
