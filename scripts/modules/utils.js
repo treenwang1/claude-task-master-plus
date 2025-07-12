@@ -713,15 +713,16 @@ function shiftTaskIds(tasks, insertPosition) {
  * Regenerates sequential task IDs from 1 to N and updates all dependency references
  * Also makes subtask IDs sequential integers (1, 2, 3, etc.) within each parent task
  * @param {Array} tasks - Array of all tasks
+ * @param {boolean} sortTasksById - Whether to sort tasks and subtasks by ID before regenerating (default: true)
  * @returns {Array} Updated tasks array with sequential IDs starting from 1
  */
-function regenerateSequentialTaskIds(tasks) {
+function regenerateSequentialTaskIds(tasks, sortTasksById = true) {
 	if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
 		return tasks;
 	}
 
-	// Sort tasks to maintain a consistent order (by current ID)
-	const sortedTasks = [...tasks].sort((a, b) => a.id - b.id);
+	// Sort tasks to maintain a consistent order (by current ID) if requested
+	const sortedTasks = sortTasksById ? [...tasks].sort((a, b) => a.id - b.id) : [...tasks];
 	
 	// Create mapping for task IDs: old task ID -> new task ID
 	const taskIdMapping = new Map();
@@ -736,8 +737,10 @@ function regenerateSequentialTaskIds(tasks) {
 		
 		// If task has subtasks, create sequential subtask IDs
 		if (task.subtasks && task.subtasks.length > 0) {
-			// Sort subtasks by their current ID to maintain order
-			const sortedSubtasks = [...task.subtasks].sort((a, b) => a.id - b.id);
+			// Sort subtasks by their current ID to maintain order (if requested)
+			const sortedSubtasks = sortTasksById ? 
+				[...task.subtasks].sort((a, b) => a.id - b.id) : 
+				[...task.subtasks];
 			
 			sortedSubtasks.forEach((subtask, subtaskIndex) => {
 				const newSubtaskId = subtaskIndex + 1;
@@ -758,8 +761,10 @@ function regenerateSequentialTaskIds(tasks) {
 		
 		// Update subtasks if they exist
 		if (task.subtasks && task.subtasks.length > 0) {
-			// Sort subtasks by their current ID to maintain order
-			const sortedSubtasks = [...task.subtasks].sort((a, b) => a.id - b.id);
+			// Sort subtasks by their current ID to maintain order (if requested)
+			const sortedSubtasks = sortTasksById ? 
+				[...task.subtasks].sort((a, b) => a.id - b.id) : 
+				[...task.subtasks];
 			
 			updatedTask.subtasks = sortedSubtasks.map((subtask, subtaskIndex) => ({
 				...subtask,
@@ -839,10 +844,11 @@ function regenerateSequentialTaskIds(tasks) {
 /**
  * Rewrites sequential task IDs in a task file
  * @param {string} task_file_path - Path to the task file
+ * @param {boolean} sortTasksById - Whether to sort tasks and subtasks by ID before regenerating (default: true)
  */
-function rewriteSequentialTaskIds(task_file_path) {
+function rewriteSequentialTaskIds(task_file_path, sortTasksById = true) {
 	const taskObject = readJSON(task_file_path);
-	const updatedTasks = regenerateSequentialTaskIds(taskObject?.tasks);
+	const updatedTasks = regenerateSequentialTaskIds(taskObject?.tasks, sortTasksById);
 	writeJSON(task_file_path, { ...taskObject, tasks: updatedTasks });
 	return updatedTasks;
 }

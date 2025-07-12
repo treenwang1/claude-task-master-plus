@@ -25,7 +25,7 @@ import taskExists from './task-manager/task-exists.js';
 import isTaskDependentOn from './task-manager/is-task-dependent.js';
 import moveTask from './task-manager/move-task.js';
 import { migrateProject } from './task-manager/migrate.js';
-import { readComplexityReport, rewriteSequentialTaskIds } from './utils.js';
+import { readComplexityReport, regenerateSequentialTaskIds, rewriteSequentialTaskIds } from './utils.js';
 import { addDependency } from './dependency-manager.js';
 // Export task manager functions
 export {
@@ -56,5 +56,6 @@ export {
 	readComplexityReport,
 	migrateProject,
 	addDependency,
+	regenerateSequentialTaskIds,
 	rewriteSequentialTaskIds
 };
