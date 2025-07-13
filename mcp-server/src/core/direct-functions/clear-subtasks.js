@@ -3,10 +3,6 @@
  */
 
 import { clearSubtasks } from '../../../../scripts/modules/task-manager.js';
-import {
-	enableSilentMode,
-	disableSilentMode
-} from '../../../../scripts/modules/utils.js';
 import fs from 'fs';
 
 /**
@@ -85,37 +81,25 @@ export async function clearSubtasksDirect(args, log) {
 
 		log.info(`Clearing subtasks from tasks: ${taskIds}`);
 
-		// Enable silent mode to prevent console logs from interfering with JSON response
-		enableSilentMode();
+		// Call the core function with json output format to suppress console output
+		const result = clearSubtasks(tasksPath, taskIds, 'json');
 
-		// Call the core function
-		clearSubtasks(tasksPath, taskIds);
+		// The core function now returns a structured result
+		if (!result.success) {
+			return result; // Return the error as-is
+		}
 
-		// Restore normal logging
-		disableSilentMode();
-
-		// Read the updated data to provide a summary
-		const updatedData = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
-		const taskIdArray = taskIds.split(',').map((id) => parseInt(id.trim(), 10));
-
-		// Build a summary of what was done
-		const clearedTasksCount = taskIdArray.length;
-		const taskSummary = taskIdArray.map((id) => {
-			const task = updatedData.tasks.find((t) => t.id === id);
-			return task ? { id, title: task.title } : { id, title: 'Task not found' };
-		});
-
+		// Return the success result
 		return {
 			success: true,
 			data: {
-				message: `Successfully cleared subtasks from ${clearedTasksCount} task(s)`,
-				tasksCleared: taskSummary
+				message: `Successfully cleared subtasks from ${result.data.clearedCount} task(s)`,
+				clearedCount: result.data.clearedCount,
+				results: result.data.results,
+				errors: result.data.errors
 			}
 		};
 	} catch (error) {
-		// Make sure to restore normal logging even if there's an error
-		disableSilentMode();
-
 		log.error(`Error in clearSubtasksDirect: ${error.message}`);
 		return {
 			success: false,

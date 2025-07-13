@@ -1185,7 +1185,7 @@ function validateAndFixDependencies(tasksData, tasksPath = null) {
 					subtask.dependencies = subtask.dependencies.filter((depId) => {
 						// Handle numeric subtask references
 						if (typeof depId === 'number' && depId < 100) {
-							const fullSubtaskId = `${task.id}.${depId}`;
+							const fullSubtaskId = depId.toString();
 							return taskExists(tasksData.tasks, fullSubtaskId);
 						}
 						// Handle full task/subtask references

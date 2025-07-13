@@ -67,7 +67,8 @@ const DEFAULTS = {
 		logLevel: 'info',
 		debug: false,
 		defaultSubtasks: 5,
-		defaultPriority: 'medium',
+		defaultPriority: 'high',
+		currentGroup: 'default',
 		projectName: 'Task Master',
 		defaultFlow: [
 			{"status": "pending", "executor": "agent"}, 

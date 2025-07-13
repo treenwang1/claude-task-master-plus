@@ -87,8 +87,6 @@ async function addTask(
 	const isMCP = !!mcpLog;
 
 	// Extract assignees, executor, and id from manualTaskData, with defaults
-	const assignees = manualTaskData?.assignees || [];
-	const executor = manualTaskData?.executor || 'agent';
 	const insertAtTaskId = manualTaskData?.id ?? null; // Position where to insert the task (null means add to end)
 	priority = priority || manualTaskData?.priority;
 
@@ -1016,19 +1014,18 @@ async function addTask(
 
 		// Create the new task object
 		const newTask = {
+			...taskData,
 			id: newTaskId,
-			title: taskData.title,
-			description: taskData.description,
 			details: taskData.details || '',
 			testStrategy: taskData.testStrategy || '',
-			status: 'pending',
+			status: taskData.status || 'pending',
 			dependencies: taskData.dependencies?.length
 				? taskData.dependencies
 				: numericDependencies, // Use AI-suggested dependencies if available, fallback to manually specified
 			priority: effectivePriority,
-			subtasks: [], // Initialize with empty subtasks array
-			assignees: taskData.assignees || assignees, // Use AI-suggested assignees if available, fallback to manual/default assignees
-			executor: taskData.executor || executor // Use AI-suggested executor if available, fallback to provided executor
+			subtasks: taskData.subtasks || [], // Initialize with empty subtasks array
+			assignees: taskData.assignees, // Use AI-suggested assignees if available, fallback to manual/default assignees
+			executor: taskData.executor // Use AI-suggested executor if available, fallback to provided executor
 		};
 
 		// Additional check: validate all dependencies in the AI response

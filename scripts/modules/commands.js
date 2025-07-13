@@ -1584,17 +1584,33 @@ function registerCommands(programInstance) {
 				process.exit(1);
 			}
 
-			if (all) {
-				// If --all is specified, get all task IDs
-				const data = readJSON(tasksPath);
-				if (!data || !data.tasks) {
-					console.error(chalk.red('Error: No valid tasks found'));
+			try {
+				let finalTaskIds;
+				
+				if (all) {
+					// If --all is specified, get all task IDs
+					const data = readJSON(tasksPath);
+					if (!data || !data.tasks) {
+						console.error(chalk.red('Error: No valid tasks found'));
+						process.exit(1);
+					}
+					finalTaskIds = data.tasks.map((t) => t.id).join(',');
+				} else {
+					finalTaskIds = taskIds;
+				}
+
+				// Call the core function with 'text' output format for CLI
+				const result = clearSubtasks(tasksPath, finalTaskIds, 'text');
+				
+				if (!result.success) {
+					console.error(chalk.red(`Error: ${result.error.message}`));
 					process.exit(1);
 				}
-				const allIds = data.tasks.map((t) => t.id).join(',');
-				clearSubtasks(tasksPath, allIds);
-			} else {
-				clearSubtasks(tasksPath, taskIds);
+				
+				// Success is already handled by the core function's text output
+			} catch (error) {
+				console.error(chalk.red(`Error: ${error.message}`));
+				process.exit(1);
 			}
 		});
 

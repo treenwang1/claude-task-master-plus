@@ -24,7 +24,7 @@
     "debug": false,
     "currentGroup": "default",
     "defaultSubtasks": 5,
-    "defaultPriority": "medium",
+    "defaultPriority": "high",
     "projectName": "Taskmaster",
     "defaultFlow": [
       {"status": "pending", "executor": "agent"}, 
