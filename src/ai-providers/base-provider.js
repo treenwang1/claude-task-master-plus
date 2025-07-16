@@ -78,8 +78,18 @@ export class BaseAIProvider {
 	/**
 	 * Common error handler
 	 */
+
+	/**
+	 * Common error handler
+	 */
 	handleError(operation, error) {
-		const errorMessage = error.message || 'Unknown error occurred';
+		let errorMessage = 'Unknown error occurred';
+		if(error?.responseBody){
+			const errorResponse = JSON.parse(error.responseBody);
+			errorMessage = errorResponse?.error?.message || error.message || 'Unknown error occurred';
+		}else{
+			errorMessage = error.message || 'Unknown error occurred';
+		}
 		log('error', `${this.name} ${operation} failed: ${errorMessage}`, {
 			error
 		});

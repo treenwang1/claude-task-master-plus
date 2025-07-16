@@ -21,12 +21,12 @@ export function registerAddTaskTool(server) {
 		name: 'add_task',
 		description: 'Add a new task using AI',
 		parameters: z.object({
-			prompt: z
-				.string()
-				.optional()
-				.describe(
-					'Description of the task to add (required if not using manual fields)'
-				),
+			// prompt: z
+			// 	.string()
+			// 	.optional()
+			// 	.describe(
+			// 		'Description of the task to add (required if not using manual fields)'
+			// 	),
 			title: z
 				.string()
 				.optional()

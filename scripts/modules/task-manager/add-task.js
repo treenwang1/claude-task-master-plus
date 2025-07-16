@@ -44,7 +44,50 @@ const AiTaskDataSchema = z.object({
 	executor: z
 		.enum(['agent', 'human'])
 		.optional()
-		.describe('Who should execute this task: "agent" for AI agents to handle automatically, "human" for manual execution by humans. Defaults to "agent".')
+		.describe('Who should execute this task: "agent" for AI agents to handle automatically, "human" for manual execution by humans. Defaults to "agent".'),
+	verifications: z
+		.array(z.object({
+			description: z.string().describe('Description of what to verify'),
+			passed: z.boolean().describe('Whether this verification has passed')
+		}))
+		.optional()
+		.describe('Array of verification steps to check if the task is completed correctly'),
+	results: z
+		.string()
+		.optional()
+		.describe('Results or outcomes of the task execution'),
+	metadata: z
+		.object({
+			fields: z
+				.array(z.object({
+					key: z.string().describe('Field key'),
+					label: z.string().describe('Field label'),
+					type: z.string().describe('Field input type'),
+					description: z.string().describe('Field description'),
+					required: z.boolean().describe('Whether field is required'),
+					enum: z.array(z.string()).optional().describe('Enum values for select fields')
+				}))
+				.optional()
+				.describe('Custom fields for this task'),
+			mcp: z
+				.array(z.string())
+				.optional()
+				.describe('MCP servers required for this task'),
+			linksTo: z
+				.object({
+					taskGroup: z.string().describe('Task group this task links to')
+				})
+				.optional()
+				.describe('Task group linkage'),
+			linkedBy: z
+				.object({
+					taskGroup: z.string().describe('Task group linked by this task')
+				})
+				.optional()
+				.describe('Task group linked by this task')
+		})
+		.optional()
+		.describe('Metadata for task configuration and relationships')
 });
 
 /**
@@ -1025,7 +1068,10 @@ async function addTask(
 			priority: effectivePriority,
 			subtasks: taskData.subtasks || [], // Initialize with empty subtasks array
 			assignees: taskData.assignees, // Use AI-suggested assignees if available, fallback to manual/default assignees
-			executor: taskData.executor // Use AI-suggested executor if available, fallback to provided executor
+			executor: taskData.executor, // Use AI-suggested executor if available, fallback to provided executor
+			verifications: taskData.verifications || [], // Initialize with empty verifications array
+			results: taskData.results || '', // Initialize with empty results
+			metadata: taskData.metadata || {} // Initialize with empty metadata object
 		};
 
 		// Additional check: validate all dependencies in the AI response

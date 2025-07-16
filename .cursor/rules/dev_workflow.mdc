@@ -29,6 +29,7 @@ Task Master offers two primary ways to interact:
 ## Standard Development Workflow Process
 
 -   Start new projects by running `initialize_project` tool / `task-master init` or `parse_prd` / `task-master parse-prd --input='<prd-file.txt>'` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)) to generate initial tasks.json
+    - Optionally, use the `tasks` parameter in `parse_prd` to provide pre-analyzed task arrays instead of generating via LLM: `parse_prd` with `tasks: [...]` (MCP) or `task-master parse-prd --tasks='[...]'` (CLI)
 -   Begin coding sessions with `get_tasks` / `task-master list` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)) to see current tasks, status, and IDs
 -   Determine the next task to work on using `next_task` / `task-master next` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)).
 -   Analyze task complexity with `analyze_project_complexity` / `task-master analyze-complexity --research` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)) before breaking down tasks
@@ -118,6 +119,9 @@ Taskmaster supports configurable task flow states through the `defaultFlow` sett
     - `"human"`: Task requires manual execution by humans and should not be auto-executed by LLMs
     - Defaults to `"agent"` if not specified
 - **subtasks**: List of smaller, more specific tasks (Example: `[{"id": 1, "title": "Configure OAuth", ...}]`) 
+- **verifications**: Array of verification objects for AI task completion validation (Example: `[{"description": "API endpoint responds", "passed": true}]`)
+- **results**: String field for AI to update with task execution results (Example: `"Successfully implemented OAuth flow"`)
+- **metadata**: Complex object containing custom fields, MCP servers, and task group relationships (Example: `{"fields": {...}, "mcpServers": [...], "taskGroups": [...]}`)
 - Refer to task structure details (previously linked to `tasks.mdc`).
 
 ## Configuration Management (Updated)

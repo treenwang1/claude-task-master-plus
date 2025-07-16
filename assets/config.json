@@ -23,7 +23,7 @@
 		"logLevel": "info",
 		"debug": false,
 		"defaultSubtasks": 5,
-		"currentGroup": "default",
+		"workingTaskGroup": "default",
 		"defaultPriority": "high",
 		"projectName": "Taskmaster",
 		"defaultFlow": [

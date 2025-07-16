@@ -315,6 +315,12 @@ async function _unifiedServiceRunner(serviceType, params) {
 		sequence = ['research', 'fallback', 'main'];
 	} else if (initialRole === 'fallback') {
 		sequence = ['fallback', 'main', 'research'];
+	} else if (initialRole === 'main-only') {
+		sequence = ['main'];
+	} else if (initialRole === 'fallback-only') {
+		sequence = ['fallback'];
+	} else if (initialRole === 'research-only') {
+		sequence = ['research'];
 	} else {
 		log(
 			'warn',
@@ -346,6 +352,7 @@ async function _unifiedServiceRunner(serviceType, params) {
 			} else if (currentRole === 'research') {
 				providerName = getResearchProvider(effectiveProjectRoot);
 				modelId = getResearchModelId(effectiveProjectRoot);
+				serviceType = 'generateText'; // Perplexity does not support generateObject
 			} else if (currentRole === 'fallback') {
 				providerName = getFallbackProvider(effectiveProjectRoot);
 				modelId = getFallbackModelId(effectiveProjectRoot);

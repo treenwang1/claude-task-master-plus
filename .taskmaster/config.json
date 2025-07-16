@@ -22,7 +22,6 @@
   "global": {
     "logLevel": "info",
     "debug": false,
-    "currentGroup": "default",
     "defaultSubtasks": 5,
     "defaultPriority": "high",
     "projectName": "Taskmaster",

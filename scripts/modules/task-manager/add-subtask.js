@@ -90,7 +90,10 @@ async function addSubtask(
 			newSubtask = {
 				...existingTask,
 				id: newSubtaskId,
-				parentTaskId: parentIdNum
+				parentTaskId: parentIdNum,
+				verifications: existingTask.verifications || [],
+				results: existingTask.results || '',
+				metadata: existingTask.metadata || {}
 			};
 
 			// Add to parent's subtasks
@@ -123,7 +126,10 @@ async function addSubtask(
 				dependencies: newSubtaskData.dependencies || [],
 				assignees: newSubtaskData.assignees || [],
 				executor: newSubtaskData.executor || 'agent',
-				parentTaskId: parentIdNum
+				parentTaskId: parentIdNum,
+				verifications: newSubtaskData.verifications || [],
+				results: newSubtaskData.results || '',
+				metadata: newSubtaskData.metadata || {}
 			};
 
 			// Add to parent's subtasks

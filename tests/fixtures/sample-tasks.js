@@ -19,7 +19,33 @@ export const sampleTasks = {
 			priority: 'high',
 			details:
 				'Create directory structure, initialize package.json, and install dependencies',
-			testStrategy: 'Verify all directories and files are created correctly'
+			testStrategy: 'Verify all directories and files are created correctly',
+			verifications: [
+				{
+					description: 'Check if package.json exists',
+					passed: true
+				},
+				{
+					description: 'Verify directory structure is correct',
+					passed: true
+				}
+			],
+			results: 'Project initialized successfully with all required files and directories',
+			metadata: {
+				fields: [
+					{
+						key: 'projectName',
+						label: 'Project Name',
+						type: 'text',
+						description: 'Name of the project',
+						required: true
+					}
+				],
+				mcp: ['filesystem'],
+				linksTo: {
+					taskGroup: 'setup'
+				}
+			}
 		},
 		{
 			id: 2,
@@ -31,20 +57,86 @@ export const sampleTasks = {
 			details:
 				'Implement user authentication, data processing, and API endpoints',
 			testStrategy: 'Write unit tests for all core functions',
+			verifications: [
+				{
+					description: 'Authentication system is working',
+					passed: true
+				},
+				{
+					description: 'Database connection established',
+					passed: false
+				}
+			],
+			results: 'Authentication implemented, database setup in progress',
+			metadata: {
+				fields: [
+					{
+						key: 'authProvider',
+						label: 'Authentication Provider',
+						type: 'select',
+						description: 'Choose authentication provider',
+						required: true,
+						enum: ['jwt', 'oauth', 'session']
+					}
+				],
+				mcp: ['database', 'authentication'],
+				linkedBy: {
+					taskGroup: 'setup'
+				}
+			},
 			subtasks: [
 				{
 					id: 1,
 					title: 'Implement Authentication',
 					description: 'Create user authentication system',
 					status: 'done',
-					dependencies: []
+					dependencies: [],
+					verifications: [
+						{
+							description: 'Login functionality works',
+							passed: true
+						}
+					],
+					results: 'JWT authentication implemented successfully',
+					metadata: {
+						fields: [
+							{
+								key: 'tokenExpiry',
+								label: 'Token Expiry',
+								type: 'number',
+								description: 'Token expiry time in hours',
+								required: true
+							}
+						],
+						mcp: ['jwt']
+					}
 				},
 				{
 					id: 2,
 					title: 'Set Up Database',
 					description: 'Configure database connection and models',
 					status: 'pending',
-					dependencies: [1]
+					dependencies: [1],
+					verifications: [
+						{
+							description: 'Database connection established',
+							passed: false
+						}
+					],
+					results: '',
+					metadata: {
+						fields: [
+							{
+								key: 'dbType',
+								label: 'Database Type',
+								type: 'select',
+								description: 'Type of database to use',
+								required: true,
+								enum: ['postgresql', 'mysql', 'mongodb']
+							}
+						],
+						mcp: ['database']
+					}
 				}
 			]
 		},

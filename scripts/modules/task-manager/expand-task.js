@@ -46,7 +46,50 @@ const subtaskSchema = z
 			.enum(['agent', 'human'])
 			.optional()
 			.default('agent')
-			.describe('Who should execute this subtask: "agent" for AI agents or "human" for manual execution')
+			.describe('Who should execute this subtask: "agent" for AI agents or "human" for manual execution'),
+		verifications: z
+			.array(z.object({
+				description: z.string().describe('Description of what to verify'),
+				passed: z.boolean().describe('Whether this verification has passed')
+			}))
+			.optional()
+			.describe('Array of verification steps to check if the subtask is completed correctly'),
+		results: z
+			.string()
+			.optional()
+			.describe('Results or outcomes of the subtask execution'),
+		metadata: z
+			.object({
+				fields: z
+					.array(z.object({
+						key: z.string().describe('Field key'),
+						label: z.string().describe('Field label'),
+						type: z.string().describe('Field input type'),
+						description: z.string().describe('Field description'),
+						required: z.boolean().describe('Whether field is required'),
+						enum: z.array(z.string()).optional().describe('Enum values for select fields')
+					}))
+					.optional()
+					.describe('Custom fields for this subtask'),
+				mcp: z
+					.array(z.string())
+					.optional()
+					.describe('MCP servers required for this subtask'),
+				linksTo: z
+					.object({
+						taskGroup: z.string().describe('Task group this subtask links to')
+					})
+					.optional()
+					.describe('Task group linkage'),
+				linkedBy: z
+					.object({
+						taskGroup: z.string().describe('Task group linked by this subtask')
+					})
+					.optional()
+					.describe('Task group linked by this subtask')
+			})
+			.optional()
+			.describe('Metadata for subtask configuration and relationships')
 	})
 	.strict();
 const subtaskArraySchema = z.array(subtaskSchema);
