@@ -161,8 +161,8 @@ When implementing commands that delete or remove data (like `remove-task` or `re
 ## Option Naming Conventions
 
 - **Command Names**:
-  - ✅ DO: Use kebab-case for command names (`analyze-complexity`)
-  - ❌ DON'T: Use camelCase for command names (`analyzeComplexity`)
+  - ✅ DO: Use kebab-case for command names (`expand-task`)
+  - ❌ DON'T: Use camelCase for command names (`expandTask`)
   - ✅ DO: Use descriptive, action-oriented names
 
 - **Option Names**:

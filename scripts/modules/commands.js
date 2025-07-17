@@ -26,7 +26,7 @@ import {
 	addTask,
 	addSubtask,
 	removeSubtask,
-	analyzeTaskComplexity,
+	
 	updateTaskById,
 	updateSubtaskById,
 	updateSubtaskNormalAttributeById,
@@ -1441,8 +1441,9 @@ function registerCommands(programInstance) {
 			'Enable research-backed generation (e.g., using Perplexity)',
 			false
 		)
-		.option('-p, --prompt <text>', 'Additional context for subtask generation')
+		// .option('-p, --prompt <text>', 'Additional context for subtask generation')
 		.option('-f, --force', 'Force expansion even if subtasks exist', false) // Ensure force option exists
+		.option('-s, --subtasks <json>', 'JSON string of subtask objects to use directly, bypassing AI generation')
 		.option(
 			'--file <file>',
 			'Path to the tasks file (relative to project root)',
@@ -1458,6 +1459,11 @@ function registerCommands(programInstance) {
 
 			if (options.all) {
 				// --- Handle expand --all ---
+				if (options.subtasks) {
+					console.error(chalk.red('Error: --subtasks option cannot be used with --all. Use --id to specify a single task.'));
+					process.exit(1);
+				}
+				
 				console.log(chalk.blue('Expanding all pending tasks...'));
 				// Updated call to the refactored expandAllTasks
 				try {
@@ -1486,6 +1492,22 @@ function registerCommands(programInstance) {
 				}
 
 				console.log(chalk.blue(`Expanding task ${options.id}...`));
+				
+				// Process subtasks parameter if provided
+				let processedSubtasks = null;
+				if (options.subtasks) {
+					try {
+						processedSubtasks = JSON.parse(options.subtasks);
+						if (!Array.isArray(processedSubtasks)) {
+							console.error(chalk.red('Error: Subtasks must be a JSON array.'));
+							process.exit(1);
+						}
+					} catch (error) {
+						console.error(chalk.red(`Error parsing subtasks JSON: ${error.message}`));
+						process.exit(1);
+					}
+				}
+				
 				try {
 					// Call the refactored expandTask function
 					await expandTask(
@@ -1495,7 +1517,8 @@ function registerCommands(programInstance) {
 						options.research,
 						options.prompt,
 						{}, // Pass empty context for CLI calls
-						options.force // Pass the force flag down
+						options.force, // Pass the force flag down
+						processedSubtasks // Pass the processed subtasks
 					);
 					// expandTask logs its own success/failure for single task
 				} catch (error) {
@@ -1512,71 +1535,7 @@ function registerCommands(programInstance) {
 			}
 		});
 
-	// analyze-complexity command
-	programInstance
-		.command('analyze-complexity')
-		.description(
-			`Analyze tasks and generate expansion recommendations${chalk.reset('')}`
-		)
-		.option(
-			'-o, --output <file>',
-			'Output file path for the report',
-			COMPLEXITY_REPORT_FILE
-		)
-		.option(
-			'-m, --model <model>',
-			'LLM model to use for analysis (defaults to configured model)'
-		)
-		.option(
-			'-t, --threshold <number>',
-			'Minimum complexity score to recommend expansion (1-10)',
-			'5'
-		)
-		.option(
-			'-f, --file <file>',
-			'Path to the tasks file',
-			TASKMASTER_TASKS_FILE
-		)
-		.option(
-			'-r, --research',
-			'Use Perplexity AI for research-backed complexity analysis'
-		)
-		.option(
-			'-i, --id <ids>',
-			'Comma-separated list of specific task IDs to analyze (e.g., "1,3,5")'
-		)
-		.option('--from <id>', 'Starting task ID in a range to analyze')
-		.option('--to <id>', 'Ending task ID in a range to analyze')
-		.action(async (options) => {
-			const tasksPath = options.file || TASKMASTER_TASKS_FILE;
-			const outputPath = options.output;
-			const modelOverride = options.model;
-			const thresholdScore = parseFloat(options.threshold);
-			const useResearch = options.research || false;
 
-			console.log(chalk.blue(`Analyzing task complexity from: ${tasksPath}`));
-			console.log(chalk.blue(`Output report will be saved to: ${outputPath}`));
-
-			if (options.id) {
-				console.log(chalk.blue(`Analyzing specific task IDs: ${options.id}`));
-			} else if (options.from || options.to) {
-				const fromStr = options.from ? options.from : 'first';
-				const toStr = options.to ? options.to : 'last';
-				console.log(
-					chalk.blue(`Analyzing tasks in range: ${fromStr} to ${toStr}`)
-				);
-			}
-
-			if (useResearch) {
-				console.log(
-					chalk.blue(
-						'Using Perplexity AI for research-backed complexity analysis'
-					)
-				);
-			}
-
-			await analyzeTaskComplexity(options);
-		});
 
 	// clear-subtasks command
 	programInstance

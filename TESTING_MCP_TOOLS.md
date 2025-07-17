@@ -127,10 +127,6 @@ npx task-master-ai update-task --id=1 --prompt="Test update from CLI"
 # Add a task  
 npx task-master-ai add-task --prompt="Test new task" --priority=high
 
-# Analyze complexity
-npx task-master-ai analyze-complexity --research
-```
-
 ## Development Workflow
 
 ### During Feature Development

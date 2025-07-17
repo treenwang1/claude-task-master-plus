@@ -25,6 +25,7 @@ import { createLogWrapper } from '../../tools/utils.js';
  * @param {boolean} [args.research] - Enable research role for subtask generation.
  * @param {string} [args.prompt] - Additional context to guide subtask generation.
  * @param {boolean} [args.force] - Force expansion even if subtasks exist.
+ * @param {Array<Object>|string} [args.subtasks] - Array of subtask objects to use directly (from MCP), or JSON string to parse (from CLI).
  * @param {string} [args.projectRoot] - Project root directory.
  * @param {Object} log - Logger object
  * @param {Object} context - Context object containing session
@@ -34,7 +35,7 @@ import { createLogWrapper } from '../../tools/utils.js';
 export async function expandTaskDirect(args, log, context = {}) {
 	const { session } = context; // Extract session
 	// Destructure expected args, including projectRoot
-	const { tasksJsonPath, id, num, research, prompt, force, projectRoot } = args;
+	const { tasksJsonPath, id, num, research, prompt, force, subtasks, projectRoot } = args;
 
 	// Log session root data for debugging
 	log.info(
@@ -81,6 +82,37 @@ export async function expandTaskDirect(args, log, context = {}) {
 	const useResearch = research === true;
 	const additionalContext = prompt || '';
 	const forceFlag = force === true;
+	
+	// Process subtasks parameter
+	let processedSubtasks = null;
+	if (subtasks) {
+		try {
+			// If subtasks is a string, parse it as JSON
+			if (typeof subtasks === 'string') {
+				processedSubtasks = JSON.parse(subtasks);
+			} else if (Array.isArray(subtasks)) {
+				processedSubtasks = subtasks;
+			} else {
+				log.error('Subtasks parameter must be an array or JSON string');
+				return {
+					success: false,
+					error: {
+						code: 'INPUT_VALIDATION_ERROR',
+						message: 'Subtasks parameter must be an array or JSON string'
+					}
+				};
+			}
+		} catch (error) {
+			log.error(`Error parsing subtasks JSON: ${error.message}`);
+			return {
+				success: false,
+				error: {
+					code: 'INPUT_VALIDATION_ERROR',
+					message: `Invalid subtasks JSON: ${error.message}`
+				}
+			};
+		}
+	}
 
 	try {
 		log.info(
@@ -200,7 +232,8 @@ export async function expandTaskDirect(args, log, context = {}) {
 					commandName: 'expand-task',
 					outputType: 'mcp'
 				},
-				forceFlag
+				forceFlag,
+				processedSubtasks
 			);
 
 			// Restore normal logging

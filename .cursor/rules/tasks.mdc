@@ -124,13 +124,13 @@ alwaysApply: false
 
 - **Task Expansion**:
   - ✅ DO: Use AI to generate detailed subtasks
-  - ✅ DO: Consider complexity analysis for subtask counts
+  - ✅ DO: Use appropriate subtask counts based on task scope
   - ✅ DO: Ensure proper IDs for newly created subtasks
 
   ```javascript
-  // ✅ DO: Generate appropriate subtasks based on complexity
+  // ✅ DO: Generate appropriate subtasks based on task scope
   if (taskAnalysis) {
-    log('info', `Found complexity analysis for task ${taskId}: Score ${taskAnalysis.complexityScore}/10`);
+    log('info', `Found task analysis for task ${taskId}`);
     
     // Use recommended number of subtasks if available
     if (taskAnalysis.recommendedSubtasks && numSubtasks === CONFIG.defaultSubtasks) {
@@ -232,51 +232,276 @@ alwaysApply: false
   });
   ```
 
-## Complexity Analysis
+## Task Expansion
 
-- **Scoring System**:
-  - ✅ DO: Use AI to analyze task complexity
-  - ✅ DO: Include complexity scores (1-10)
+- **Expansion Process**:
+  - ✅ DO: Use AI to expand tasks into subtasks
   - ✅ DO: Generate specific expansion recommendations
+  - ✅ DO: Consider task scope and requirements
 
   ```javascript
-  // ✅ DO: Handle complexity analysis properly
-  const report = {
-    meta: {
-      generatedAt: new Date().toISOString(),
-      tasksAnalyzed: tasksData.tasks.length,
-      thresholdScore: thresholdScore,
-      projectName: tasksData.meta?.projectName || 'Your Project Name',
-      usedResearch: useResearch
-    },
-    complexityAnalysis: complexityAnalysis
+  // ✅ DO: Handle task expansion properly
+  const expandedTask = {
+    ...task,
+    subtasks: generatedSubtasks,
+    lastExpanded: new Date().toISOString()
   };
   ```
 
-- **Analysis-Based Workflow**:
-  - ✅ DO: Use complexity reports to guide task expansion
-  - ✅ DO: Prioritize complex tasks for more detailed breakdown
-  - ✅ DO: Use expansion prompts from complexity analysis
+## Task Verification System
+
+- **Verification Structure**:
+  - ✅ DO: Include verifications array in task objects
+  - ✅ DO: Create specific, testable verification criteria
+  - ✅ DO: Use factual, observable conditions
+  - ❌ DON'T: Create vague or subjective verifications
 
   ```javascript
-  // ✅ DO: Apply complexity analysis to workflow
-  // Sort tasks by complexity if report exists, otherwise by ID
-  if (complexityReport && complexityReport.complexityAnalysis) {
-    log('info', 'Sorting tasks by complexity...');
+  // ✅ DO: Structure verifications properly
+  const taskWithVerifications = {
+    id: 1,
+    title: "Setup API Authentication",
+    description: "Implement JWT-based authentication",
+    status: "pending",
+    verifications: [
+      {
+        description: "API endpoint /auth/login exists and responds with 200",
+        passed: false
+      },
+      {
+        description: "JWT middleware is configured in server.js",
+        passed: false
+      },
+      {
+        description: "Token validation function returns true for valid tokens",
+        passed: false
+      }
+    ]
+  };
+  ```
+
+- **Verification Testing**:
+  - ✅ DO: Test each verification systematically
+  - ✅ DO: Update passed status based on factual evidence
+  - ✅ DO: Use multiple testing methods for comprehensive validation
+  - ❌ DON'T: Skip verification testing before task execution
+
+  ```javascript
+  // ✅ DO: Implement verification testing
+  async function testTaskVerifications(task) {
+    const results = [];
     
-    // Create a map of task IDs to complexity scores
-    const complexityMap = new Map();
-    complexityReport.complexityAnalysis.forEach(analysis => {
-      complexityMap.set(analysis.taskId, analysis.complexityScore);
-    });
+    for (const verification of task.verifications || []) {
+      let passed = false;
+      
+      // Test based on verification description
+      if (verification.description.includes('endpoint')) {
+        // Test API endpoint
+        passed = await testApiEndpoint(verification.description);
+      } else if (verification.description.includes('file exists')) {
+        // Test file existence
+        passed = await testFileExists(verification.description);
+      } else if (verification.description.includes('function')) {
+        // Test function behavior
+        passed = await testFunctionBehavior(verification.description);
+      }
+      
+      results.push({
+        ...verification,
+        passed: passed,
+        testedAt: new Date().toISOString()
+      });
+    }
     
-    // Sort tasks by complexity score (high to low)
-    tasksToExpand.sort((a, b) => {
-      const scoreA = complexityMap.get(a.id) || 0;
-      const scoreB = complexityMap.get(b.id) || 0;
-      return scoreB - scoreA;
-    });
+    return results;
   }
+  ```
+
+- **Verification Decision Logic**:
+  - ✅ DO: Only implement tasks when verifications fail
+  - ✅ DO: Mark tasks as done when all verifications pass
+  - ✅ DO: Focus implementation on failing verifications
+  - ❌ DON'T: Implement tasks that are already complete
+
+  ```javascript
+  // ✅ DO: Implement verification decision logic
+  function shouldImplementTask(task) {
+    // If no verifications, proceed with normal implementation
+    if (!task.verifications || task.verifications.length === 0) {
+      return true;
+    }
+    
+    // Check if any verifications fail
+    const failingVerifications = task.verifications.filter(v => !v.passed);
+    
+    if (failingVerifications.length === 0) {
+      // All verifications pass - task is complete
+      return false;
+    }
+    
+    // Some verifications fail - implement the task
+    return true;
+  }
+  
+  function updateTaskBasedOnVerifications(task, verificationResults) {
+    const allPassed = verificationResults.every(v => v.passed);
+    
+    if (allPassed) {
+      // All verifications pass - mark as done
+      return {
+        ...task,
+        status: 'done',
+        verifications: verificationResults,
+        results: `Task completed. All verifications passed: ${verificationResults.map(v => v.description).join(', ')}`
+      };
+    } else {
+      // Some verifications fail - update status and proceed with implementation
+      const failingItems = verificationResults.filter(v => !v.passed);
+      return {
+        ...task,
+        status: 'in-progress',
+        verifications: verificationResults,
+        results: `Implementation needed for: ${failingItems.map(v => v.description).join(', ')}`
+      };
+    }
+  }
+  ```
+
+- **Verification Best Practices**:
+  - ✅ DO: Write specific, actionable verification criteria
+  - ✅ DO: Include both positive and negative test cases
+  - ✅ DO: Use objective, measurable conditions
+  - ❌ DON'T: Create verifications that can't be objectively tested
+
+  ```javascript
+  // ✅ GOOD: Specific and testable verifications
+  const goodVerifications = [
+    {
+      description: "HTTP server starts on port 3000 without errors",
+      passed: false
+    },
+    {
+      description: "Database connection string in config/database.js is valid",
+      passed: false
+    },
+    {
+      description: "User registration endpoint returns 201 status for valid input",
+      passed: false
+    }
+  ];
+  
+  // ❌ BAD: Vague or subjective verifications
+  const badVerifications = [
+    {
+      description: "System works correctly", // Too vague
+      passed: false
+    },
+    {
+      description: "Code quality is good", // Subjective
+      passed: false
+    },
+    {
+      description: "Users will be happy", // Not testable
+      passed: false
+    }
+  ];
+  ```
+
+- **Integration with Task Status**:
+  - ✅ DO: Use verification workflow before status changes
+  - ✅ DO: Update verification status after implementation
+  - ✅ DO: Re-verify after making changes
+  - ❌ DON'T: Skip verification when marking tasks as done
+
+  ```javascript
+  // ✅ DO: Integrate verification with status updates and automatic progression
+  async function setTaskStatus(taskId, newStatus, taskGroup) {
+    const task = findTaskById(taskId);
+    
+    if (newStatus === 'done') {
+      // Verify task before marking as done
+      const verificationResults = await testTaskVerifications(task);
+      const allPassed = verificationResults.every(v => v.passed);
+      
+      if (!allPassed) {
+        throw new Error(`Cannot mark task as done. Failing verifications: ${
+          verificationResults.filter(v => !v.passed).map(v => v.description).join(', ')
+        }`);
+      }
+      
+      // Update task with verification results
+      task.verifications = verificationResults;
+      task.results = `Task completed successfully. All verifications passed.`;
+    }
+    
+    // Apply status update
+    task.status = newStatus;
+    
+    // CRITICAL: Apply automatic status progression after task execution
+    await applyDefaultFlowProgression(task, taskGroup);
+    
+    return task;
+  }
+
+  
+  function getCurrentTaskGroup() {
+    const configPath = path.join(process.cwd(), '.taskmaster', 'config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    return config.global?.workingTaskGroup || 'default';
+  }
+
+  
+  // ✅ DO: Implement automatic status progression based on defaultFlow
+  async function applyDefaultFlowProgression(task, taskGroup) {
+    try {
+      // get taskGroup or read default
+      taskGroup = taskGroup || getCurrentTaskGroup()
+      // Read configuration file
+      const configPath = path.join(process.cwd(), '.taskmaster', taskGroup, 'config.json');
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      const defaultFlow = config.defaultFlow || [];
+      
+      // Find current state in defaultFlow
+      const currentIndex = defaultFlow.findIndex(flow => 
+        (flow.status === task.status || flow.status === '*') &&
+        (flow.executor === task.executor || flow.executor === '*')
+      );
+      
+      // Progress to next state if found and not at end
+      if (currentIndex >= 0 && currentIndex < defaultFlow.length - 1) {
+        const nextFlow = defaultFlow[currentIndex + 1];
+        
+        // Update to next status/executor (preserve current values if next uses wildcard)
+        task.status = nextFlow.status !== '*' ? nextFlow.status : task.status;
+        task.executor = nextFlow.executor !== '*' ? nextFlow.executor : task.executor;
+        
+        console.log(`Auto-progressed task ${task.id}: ${defaultFlow[currentIndex].status} -> ${task.status}`);
+      }
+    } catch (error) {
+      console.warn('Could not apply defaultFlow progression:', error.message);
+      // Continue without progression if config cannot be read
+    }
+  }
+  ```
+
+- **Expansion-Based Workflow**:
+  - ✅ DO: Use task expansion to break down complex work
+  - ✅ DO: Prioritize tasks that need detailed breakdown
+  - ✅ DO: Use specific prompts for expansion guidance
+
+  ```javascript
+  // ✅ DO: Apply task expansion to workflow
+  // Sort tasks by priority and dependency count
+  tasksToExpand.sort((a, b) => {
+    const priorityA = getPriorityValue(a.priority);
+    const priorityB = getPriorityValue(b.priority);
+    
+    if (priorityA !== priorityB) {
+      return priorityB - priorityA; // Higher priority first
+    }
+    
+    return a.id - b.id; // Lower ID first
+  });
   ```
 
 ## Next Task Selection

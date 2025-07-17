@@ -24,8 +24,6 @@ task-master update --from=<id> --prompt="changes"            # Update multiple t
 task-master update-subtask --id=<id> --prompt="notes"        # Add implementation notes to subtask
 
 # Analysis & Planning
-task-master analyze-complexity --research          # Analyze task complexity
-task-master complexity-report                      # View complexity analysis
 task-master expand --all --research               # Expand all eligible tasks
 
 # Dependencies & Organization
@@ -64,7 +62,7 @@ project/
 │   ├── docs/              # Documentation directory
 │   │   ├── prd.md        # Product requirements
 │   ├── reports/           # Analysis reports directory
-│   │   └── task-complexity-report.json
+│   │   └── task-report.json
 │   ├── templates/         # Template files
 │   │   └── example_prd.md  # Example PRD template
 │   └── config.json        # AI models & settings
@@ -122,10 +120,6 @@ expand_task; // = task-master expand
 update_task; // = task-master update-task
 update_subtask; // = task-master update-subtask
 update; // = task-master update
-
-// Analysis
-analyze_project_complexity; // = task-master analyze-complexity
-complexity_report; // = task-master complexity-report
 ```
 
 ## Claude Code Workflow Integration
@@ -141,8 +135,7 @@ task-master init
 # Create or obtain PRD, then parse it
 task-master parse-prd .taskmaster/default/docs/prd.md
 
-# Analyze complexity and expand tasks
-task-master analyze-complexity --research
+# Analyze and expand tasks
 task-master expand --all --research
 ```
 
@@ -377,7 +370,6 @@ DO NOT RE-INITIALIZE. That will not do anything beyond re-adding the same Taskma
 These commands make AI calls and may take up to a minute:
 
 - `parse_prd` / `task-master parse-prd`
-- `analyze_project_complexity` / `task-master analyze-complexity`
 - `expand_task` / `task-master expand`
 - `expand_all` / `task-master expand --all`
 - `add_task` / `task-master add-task`

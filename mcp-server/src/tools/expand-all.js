@@ -28,18 +28,18 @@ export function registerExpandAllTool(server) {
 				.describe(
 					'Target number of subtasks per task (uses complexity/defaults otherwise)'
 				),
-			research: z
-				.boolean()
-				.optional()
-				.describe(
-					'Enable research-backed subtask generation (e.g., using Perplexity)'
-				),
-			prompt: z
-				.string()
-				.optional()
-				.describe(
-					'Additional context to guide subtask generation for all tasks'
-				),
+			// research: z
+			// 	.boolean()
+			// 	.optional()
+			// 	.describe(
+			// 		'Enable research-backed subtask generation (e.g., using Perplexity)'
+			// 	),
+			// prompt: z
+			// 	.string()
+			// 	.optional()
+			// 	.describe(
+			// 		'Additional context to guide subtask generation for all tasks'
+			// 	),
 			force: z
 				.boolean()
 				.optional()

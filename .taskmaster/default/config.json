@@ -1,0 +1,20 @@
+{
+  "defaultFlow": [
+    {
+      "status": "pending",
+      "executor": "agent"
+    },
+    {
+      "status": "in-progress",
+      "executor": "agent"
+    },
+    {
+      "status": "review",
+      "executor": "agent"
+    },
+    {
+      "status": "review",
+      "executor": "human"
+    }
+  ]
+}

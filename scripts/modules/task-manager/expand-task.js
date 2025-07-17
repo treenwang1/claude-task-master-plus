@@ -15,88 +15,11 @@ import { generateTextService } from '../ai-services-unified.js';
 import { getDefaultSubtasks, getDebugFlag } from '../config-manager.js';
 import generateTaskFiles from './generate-task-files.js';
 import { COMPLEXITY_REPORT_FILE } from '../../../src/constants/paths.js';
-
-// --- Zod Schemas (Keep from previous step) ---
-const subtaskSchema = z
-	.object({
-		id: z
-			.number()
-			.int()
-			.positive()
-			.describe('Sequential subtask ID starting from 1'),
-		title: z.string().min(5).describe('Clear, specific title for the subtask'),
-		description: z
-			.string()
-			.min(10)
-			.describe('Detailed description of the subtask'),
-		dependencies: z
-			.array(z.number().int())
-			.describe('IDs of prerequisite subtasks within this expansion'),
-		details: z.string().min(20).describe('Implementation details and guidance'),
-		status: z
-			.string()
-			.describe(
-				'The current status of the subtask (should be pending initially)'
-			),
-		testStrategy: z
-			.string()
-			.optional()
-			.describe('Approach for testing this subtask'),
-		executor: z
-			.enum(['agent', 'human'])
-			.optional()
-			.default('agent')
-			.describe('Who should execute this subtask: "agent" for AI agents or "human" for manual execution'),
-		verifications: z
-			.array(z.object({
-				description: z.string().describe('Description of what to verify'),
-				passed: z.boolean().describe('Whether this verification has passed')
-			}))
-			.optional()
-			.describe('Array of verification steps to check if the subtask is completed correctly'),
-		results: z
-			.string()
-			.optional()
-			.describe('Results or outcomes of the subtask execution'),
-		metadata: z
-			.object({
-				fields: z
-					.array(z.object({
-						key: z.string().describe('Field key'),
-						label: z.string().describe('Field label'),
-						type: z.string().describe('Field input type'),
-						description: z.string().describe('Field description'),
-						required: z.boolean().describe('Whether field is required'),
-						enum: z.array(z.string()).optional().describe('Enum values for select fields')
-					}))
-					.optional()
-					.describe('Custom fields for this subtask'),
-				mcp: z
-					.array(z.string())
-					.optional()
-					.describe('MCP servers required for this subtask'),
-				linksTo: z
-					.object({
-						taskGroup: z.string().describe('Task group this subtask links to')
-					})
-					.optional()
-					.describe('Task group linkage'),
-				linkedBy: z
-					.object({
-						taskGroup: z.string().describe('Task group linked by this subtask')
-					})
-					.optional()
-					.describe('Task group linked by this subtask')
-			})
-			.optional()
-			.describe('Metadata for subtask configuration and relationships')
-	})
-	.strict();
-const subtaskArraySchema = z.array(subtaskSchema);
-const subtaskWrapperSchema = z.object({
-	subtasks: subtaskArraySchema.describe('The array of generated subtasks.')
-});
-// --- End Zod Schemas ---
+import { 
+	subtaskSchema, 
+	subtaskArraySchema, 
+	subtaskWrapperSchema 
+} from '../../../src/schemas/task-schemas.js';
 
 /**
  * Generates the system prompt for the main AI role (e.g., Claude).
@@ -449,6 +372,7 @@ function parseSubtasksFromText(
  * @param {Object} [context.session] - Session object from MCP.
  * @param {Object} [context.mcpLog] - MCP logger object.
  * @param {boolean} [force=false] - If true, replace existing subtasks; otherwise, append.
+ * @param {Array<Object>|null} [subtasks=null] - Optional: An array of subtask objects to use directly, bypassing AI generation.
  * @returns {Promise<Object>} The updated parent task object with new subtasks.
  * @throws {Error} If task not found, AI service fails, or parsing fails.
  */
@@ -459,7 +383,8 @@ async function expandTask(
 	useResearch = false,
 	additionalContext = '',
 	context = {},
-	force = false
+	force = false,
+	subtasks = null
 ) {
 	const { session, mcpLog, projectRoot: contextProjectRoot } = context;
 	const outputFormat = mcpLog ? 'json' : 'text';
@@ -505,6 +430,40 @@ async function expandTask(
 			task.subtasks = []; // Clear existing subtasks
 		}
 		// --- End Force Flag Handling ---
+
+		// --- Direct Subtask Injection ---
+		if (subtasks && Array.isArray(subtasks)) {
+			logger.info(`Directly using ${subtasks.length} provided subtasks for task ${taskId}.`);
+			try {
+				// Validate the provided subtasks using the subtask schema
+				const validatedSubtasks = subtaskArraySchema.parse(subtasks);
+				
+				// Ensure task.subtasks is an array
+				if (!Array.isArray(task.subtasks)) {
+					task.subtasks = [];
+				}
+				
+				// Append the validated subtasks
+				task.subtasks.push(...validatedSubtasks);
+				
+				// Update the task in the data and save
+				data.tasks[taskIndex] = task;
+				writeJSON(tasksPath, data);
+				await generateTaskFiles(tasksPath, path.dirname(tasksPath));
+				
+				logger.info(`Successfully injected and saved ${validatedSubtasks.length} subtasks.`);
+				
+				// Return early since we're not using AI generation
+				return {
+					task,
+					telemetryData: null // No AI call, so no telemetry
+				};
+			} catch (error) {
+				logger.error(`Error validating or saving provided subtasks: ${error.message}`);
+				throw error; // Propagate Zod validation error or other errors
+			}
+		}
+		// --- End Direct Subtask Injection ---
 
 		// --- Complexity Report Integration ---
 		let finalSubtaskCount;

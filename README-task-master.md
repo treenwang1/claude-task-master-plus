@@ -426,38 +426,6 @@ task-master clear-subtasks --id=1,2,3
 task-master clear-subtasks --all
 ```
 
-### Analyze Task Complexity
-
-```bash
-# Analyze complexity of all tasks
-task-master analyze-complexity
-
-# Save report to a custom location
-task-master analyze-complexity --output=my-report.json
-
-# Use a specific LLM model
-task-master analyze-complexity --model=claude-3-opus-20240229
-
-# Set a custom complexity threshold (1-10)
-task-master analyze-complexity --threshold=6
-
-# Use an alternative tasks file
-task-master analyze-complexity --file=custom-tasks.json
-
-# Use Perplexity AI for research-backed complexity analysis
-task-master analyze-complexity --research
-```
-
-### View Complexity Report
-
-```bash
-# Display the task complexity analysis report
-task-master complexity-report
-
-# View a report at a custom location
-task-master complexity-report --file=my-report.json
-```
-
 ### Managing Task Dependencies
 
 ```bash
@@ -488,60 +456,6 @@ task-master add-task --prompt="Description" --priority=high
 ```
 
 ## Feature Details
-
-### Analyzing Task Complexity
-
-The `analyze-complexity` command:
-
-- Analyzes each task using AI to assess its complexity on a scale of 1-10
-- Recommends optimal number of subtasks based on configured DEFAULT_SUBTASKS
-- Generates tailored prompts for expanding each task
-- Creates a comprehensive JSON report with ready-to-use commands
-- Saves the report to scripts/task-complexity-report.json by default
-
-The generated report contains:
-
-- Complexity analysis for each task (scored 1-10)
-- Recommended number of subtasks based on complexity
-- AI-generated expansion prompts customized for each task
-- Ready-to-run expansion commands directly within each task analysis
-
-### Viewing Complexity Report
-
-The `complexity-report` command:
-
-- Displays a formatted, easy-to-read version of the complexity analysis report
-- Shows tasks organized by complexity score (highest to lowest)
-- Provides complexity distribution statistics (low, medium, high)
-- Highlights tasks recommended for expansion based on threshold score
-- Includes ready-to-use expansion commands for each complex task
-- If no report exists, offers to generate one on the spot
-
-### Smart Task Expansion
-
-The `expand` command automatically checks for and uses the complexity report:
-
-When a complexity report exists:
-
-- Tasks are automatically expanded using the recommended subtask count and prompts
-- When expanding all tasks, they're processed in order of complexity (highest first)
-- Research-backed generation is preserved from the complexity analysis
-- You can still override recommendations with explicit command-line options
-
-Example workflow:
-
-```bash
-# Generate the complexity analysis report with research capabilities
-task-master analyze-complexity --research
-
-# Review the report in a readable format
-task-master complexity-report
-
-# Expand tasks using the optimized recommendations
-task-master expand --id=8
-# or expand all tasks
-task-master expand --all
-```
 
 ### Finding the Next Task
 
@@ -574,8 +488,6 @@ The `show` command:
 1. **Start with a detailed PRD**: The more detailed your PRD, the better the generated tasks will be.
 
 2. **Review generated tasks**: After parsing the PRD, review the tasks to ensure they make sense and have appropriate dependencies.
-
-3. **Analyze task complexity**: Use the complexity analysis feature to identify which tasks should be broken down further.
 
 4. **Follow the dependency chain**: Always respect task dependencies - the Cursor agent will help with this.
 
@@ -627,16 +539,4 @@ We've decided to use MongoDB instead of PostgreSQL. Can you update all future ta
 ```
 I've finished implementing the authentication system described in task 2. All tests are passing.
 Please mark it as complete and tell me what I should work on next.
-```
-
-### Analyzing complexity
-
-```
-Can you analyze the complexity of our tasks to help me understand which ones need to be broken down further?
-```
-
-### Viewing complexity report
-
-```
-Can you show me the complexity report in a more readable format?
 ```

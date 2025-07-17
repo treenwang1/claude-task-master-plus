@@ -242,91 +242,9 @@ function sanitizePrompt(prompt) {
 	return prompt.replace(/"/g, '\\"');
 }
 
-/**
- * Reads the complexity report from file
- * @param {string} customPath - Optional custom path to the report
- * @returns {Object|null} The parsed complexity report or null if not found
- */
-function readComplexityReport(customPath = null) {
-	// GUARD: Prevent circular dependency during config loading
-	let isDebug = false; // Default fallback
-	try {
-		// Only try to get debug flag if we're not in the middle of config loading
-		isDebug = getDebugFlag();
-	} catch (error) {
-		// If getDebugFlag() fails (likely due to circular dependency),
-		// use default false and continue
-		isDebug = false;
-	}
 
-	try {
-		let reportPath;
-		if (customPath) {
-			reportPath = customPath;
-		} else {
-			// Try new location first, then fall back to legacy
-			const newPath = getTaskGroupComplexityReportFile(getWorkingTaskGroup());
-			const legacyPath = path.join(
-				process.cwd(),
-				LEGACY_COMPLEXITY_REPORT_FILE
-			);
 
-			reportPath = fs.existsSync(newPath) ? newPath : legacyPath;
-		}
 
-		if (!fs.existsSync(reportPath)) {
-			if (isDebug) {
-				log('debug', `Complexity report not found at ${reportPath}`);
-			}
-			return null;
-		}
-
-		const reportData = readJSON(reportPath);
-		if (isDebug) {
-			log('debug', `Successfully read complexity report from ${reportPath}`);
-		}
-		return reportData;
-	} catch (error) {
-		if (isDebug) {
-			log('error', `Error reading complexity report: ${error.message}`);
-		}
-		return null;
-	}
-}
-
-/**
- * Finds a task analysis in the complexity report
- * @param {Object} report - The complexity report
- * @param {number} taskId - The task ID to find
- * @returns {Object|null} The task analysis or null if not found
- */
-function findTaskInComplexityReport(report, taskId) {
-	if (
-		!report ||
-		!report.complexityAnalysis ||
-		!Array.isArray(report.complexityAnalysis)
-	) {
-		return null;
-	}
-
-	return report.complexityAnalysis.find((task) => task.taskId === taskId);
-}
-
-function addComplexityToTask(task, complexityReport) {
-	let taskId;
-	if (task.isSubtask) {
-		taskId = task.parentTask.id;
-	} else if (task.parentId) {
-		taskId = task.parentId;
-	} else {
-		taskId = task.id;
-	}
-
-	const taskAnalysis = findTaskInComplexityReport(complexityReport, taskId);
-	if (taskAnalysis) {
-		task.complexityScore = taskAnalysis.complexityScore;
-	}
-}
 
 /**
  * Checks if a task exists in the tasks array
@@ -417,10 +335,7 @@ function findTaskById(
 			subtask.isSubtask = true;
 		}
 
-		// If we found a task, check for complexity data
-		if (subtask && complexityReport) {
-			addComplexityToTask(subtask, complexityReport);
-		}
+		// Complexity analysis removed
 
 		return { task: subtask || null, originalSubtaskCount: null };
 	}
@@ -452,10 +367,7 @@ function findTaskById(
 		taskResult = filteredTask;
 	}
 
-	// If task found and complexityReport provided, add complexity data
-	if (taskResult && complexityReport) {
-		addComplexityToTask(taskResult, complexityReport);
-	}
+	// Complexity analysis removed
 
 	// Return the found task and original subtask count
 	return { task: taskResult, originalSubtaskCount };
@@ -959,8 +871,8 @@ export {
 	readJSON,
 	writeJSON,
 	sanitizePrompt,
-	readComplexityReport,
-	findTaskInComplexityReport,
+
+
 	taskExists,
 	formatTaskId,
 	findTaskById,
@@ -972,7 +884,7 @@ export {
 	enableSilentMode,
 	getTaskManager,
 	isSilentMode,
-	addComplexityToTask,
+
 	findProjectRoot,
 	aggregateTelemetry,
 	shiftTaskIds,

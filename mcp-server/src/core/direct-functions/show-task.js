@@ -5,7 +5,7 @@
 
 import {
 	findTaskById,
-	readComplexityReport,
+
 	readJSON
 } from '../../../../scripts/modules/utils.js';
 import { findTasksPath } from '../utils/path-utils.js';
@@ -64,7 +64,7 @@ export async function showTaskDirect(args, log) {
 			};
 		}
 
-		const complexityReport = readComplexityReport(reportPath);
+		const complexityReport = null; // Complexity analysis removed
 
 		const { task, originalSubtaskCount } = findTaskById(
 			tasksData.tasks,

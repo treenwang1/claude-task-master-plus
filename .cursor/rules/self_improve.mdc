@@ -1,8 +1,3 @@
----
-description: Guidelines for continuously improving Cursor rules based on emerging code patterns and best practices.
-globs: **/*
-alwaysApply: true
----
 
 - **Rule Improvement Triggers:**
   - New code patterns not covered by existing rules
@@ -50,6 +45,38 @@ alwaysApply: true
   - Examples should come from actual code
   - References should be up to date
   - Patterns should be consistently enforced
+
+- **Development Anti-Patterns to Avoid:**
+  - **Temporary Test Files:**
+    - ❌ DON'T: Create temporary JavaScript test files that are immediately deleted
+    - ❌ DON'T: Use file creation/deletion for simple validation tasks
+    - ✅ DO: Use `node -c filename.js` for syntax validation
+    - ✅ DO: Add tests to existing test files in `tests/` directory
+    - ✅ DO: Trust logical code review and static analysis
+    - **Example Anti-Pattern:**
+      ```javascript
+      // ❌ DON'T: Create temporary test files
+      const testContent = `
+        import { z } from 'zod';
+        const schema = z.object({...});
+        console.log('Schema works!');
+      `;
+      fs.writeFileSync('temp-test.js', testContent);
+      // ... then delete it
+      ```
+    - **Better Approach:**
+      ```bash
+      # ✅ DO: Use syntax checking on actual files
+      node -c mcp-server/src/tools/expand-task.js
+      ```
+
+  - **Validation Strategies:**
+    - ✅ DO: Use existing test infrastructure for complex validation
+    - ✅ DO: Trust well-structured code changes in established codebases
+    - ✅ DO: Perform logical code review instead of creating validation theater
+    - ✅ DO: Use the existing CI/CD processes and test suites
+    - ❌ DON'T: Over-engineer simple validations with temporary files
+    - ❌ DON'T: Create unnecessary file operations for confidence building
 
 - **Continuous Improvement:**
   - Monitor code review comments

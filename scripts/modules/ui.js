@@ -19,8 +19,8 @@ import {
 import fs from 'fs';
 import {
 	findNextTask,
-	analyzeTaskComplexity,
-	readComplexityReport
+	
+	
 } from './task-manager.js';
 import { getProjectName, getDefaultSubtasks } from './config-manager.js';
 import { TASK_STATUS_OPTIONS } from '../../src/constants/task-status.js';
@@ -592,11 +592,7 @@ function displayHelp() {
 			title: 'Task Analysis & Breakdown',
 			color: 'magenta',
 			commands: [
-				{
-					name: 'analyze-complexity',
-					args: '[--research] [--threshold=5]',
-					desc: 'Analyze tasks and generate expansion recommendations'
-				},
+
 				{
 					name: 'complexity-report',
 					args: '[--file=<path>]',
@@ -839,8 +835,8 @@ async function displayNextTask(tasksPath, complexityReportPath = null) {
 		process.exit(1);
 	}
 
-	// Read complexity report once
-	const complexityReport = readComplexityReport(complexityReportPath);
+	// Complexity analysis removed
+	const complexityReport = null;
 
 	// Find the next task
 	const nextTask = findNextTask(data.tasks, complexityReport);
@@ -1154,8 +1150,8 @@ async function displayTaskById(
 		process.exit(1);
 	}
 
-	// Read complexity report once
-	const complexityReport = readComplexityReport(complexityReportPath);
+	// Complexity analysis removed
+	const complexityReport = null;
 
 	// Find the task by ID, applying the status filter if provided
 	// Returns { task, originalSubtaskCount, originalSubtasks }
@@ -1684,23 +1680,8 @@ async function displayComplexityReport(reportPath) {
 		readline.close();
 
 		if (answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes') {
-			// Call the analyze-complexity command
-			console.log(chalk.blue('Generating complexity report...'));
-			const tasksPath = TASKMASTER_TASKS_FILE;
-			if (!fs.existsSync(tasksPath)) {
-				console.error(
-					'❌ No tasks.json file found. Please run "task-master init" or create a tasks.json file.'
-				);
-				return null;
-			}
-
-			await analyzeTaskComplexity({
-				output: reportPath,
-				research: false, // Default to no research for speed
-				file: tasksPath
-			});
-			// Read the newly generated report
-			return displayComplexityReport(reportPath);
+			console.log(chalk.blue('Complexity analysis has been removed from Task Master.'));
+			return null;
 		} else {
 			console.log(chalk.yellow('Report generation cancelled.'));
 			return;
@@ -1887,9 +1868,8 @@ async function displayComplexityReport(reportPath) {
 		boxen(
 			chalk.white.bold('Suggested Actions:') +
 				'\n\n' +
-				`${chalk.cyan('1.')} Expand all complex tasks: ${chalk.yellow(`task-master expand --all`)}\n` +
-				`${chalk.cyan('2.')} Expand a specific task: ${chalk.yellow(`task-master expand --id=<id>`)}\n` +
-				`${chalk.cyan('3.')} Regenerate with research: ${chalk.yellow(`task-master analyze-complexity --research`)}`,
+				`${chalk.cyan('1.')} Expand all tasks: ${chalk.yellow(`task-master expand --all`)}\n` +
+				`${chalk.cyan('2.')} Expand a specific task: ${chalk.yellow(`task-master expand --id=<id>`)}`,
 			{
 				padding: 1,
 				borderColor: 'cyan',
@@ -1900,44 +1880,7 @@ async function displayComplexityReport(reportPath) {
 	);
 }
 
-/**
- * Generate a prompt for complexity analysis
- * @param {Object} tasksData - Tasks data object containing tasks array
- * @returns {string} Generated prompt
- */
-function generateComplexityAnalysisPrompt(tasksData) {
-	const defaultSubtasks = getDefaultSubtasks(null); // Use the getter
-	return `Analyze the complexity of the following tasks and provide recommendations for subtask breakdown:
 
-${tasksData.tasks
-	.map(
-		(task) => `
-Task ID: ${task.id}
-Title: ${task.title}
-Description: ${task.description}
-Details: ${task.details}
-Dependencies: ${JSON.stringify(task.dependencies || [])}
-Priority: ${task.priority || 'medium'}
-`
-	)
-	.join('\n---\n')}
-
-Analyze each task and return a JSON array with the following structure for each task:
-[
-  {
-    "taskId": number,
-    "taskTitle": string,
-    "complexityScore": number (1-10),
-    "recommendedSubtasks": number (${Math.max(3, defaultSubtasks - 1)}-${Math.min(8, defaultSubtasks + 2)}),
-    "expansionPrompt": string (a specific prompt for generating good subtasks),
-    "reasoning": string (brief explanation of your assessment)
-  },
-  ...
-]
-
-IMPORTANT: Make sure to include an analysis for EVERY task listed above, with the correct taskId matching each task's ID.
-`;
-}
 
 /**
  * Confirm overwriting existing tasks.json file
@@ -2246,7 +2189,7 @@ export {
 	displayNextTask,
 	displayTaskById,
 	displayComplexityReport,
-	generateComplexityAnalysisPrompt,
+
 	confirmTaskOverwrite,
 	displayApiKeyStatus,
 	displayModelConfiguration,

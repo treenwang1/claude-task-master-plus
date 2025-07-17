@@ -7,6 +7,9 @@ alwaysApply: true
 
 This guide outlines the typical process for using Task Master to manage software development projects.
 
+**Imporant**
+- Get the value of `global.workingTaskGroup` in `.taskmaster/config.json` file as `currentTaskGroup`, replace all values below when meet `${currentTaskGroup}` below.
+
 ## Primary Interaction: MCP Server vs. CLI
 
 Task Master offers two primary ways to interact:
@@ -32,19 +35,19 @@ Task Master offers two primary ways to interact:
     - Optionally, use the `tasks` parameter in `parse_prd` to provide pre-analyzed task arrays instead of generating via LLM: `parse_prd` with `tasks: [...]` (MCP) or `task-master parse-prd --tasks='[...]'` (CLI)
 -   Begin coding sessions with `get_tasks` / `task-master list` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)) to see current tasks, status, and IDs
 -   Determine the next task to work on using `next_task` / `task-master next` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)).
--   Analyze task complexity with `analyze_project_complexity` / `task-master analyze-complexity --research` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)) before breaking down tasks
--   Review complexity report using `complexity_report` / `task-master complexity-report` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)).
+
+
 -   Select tasks based on dependencies (all marked 'done'), priority level, and ID order
 -   Clarify tasks by checking task files in tasks/ directory or asking for user input
 -   View specific task details using `get_task` / `task-master show <id>` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)) to understand implementation requirements
--   Break down complex tasks using `expand_task` / `task-master expand --id=<id> --force --research` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)) with appropriate flags like `--force` (to replace existing subtasks) and `--research`.
+-   Analyze the task you get and check if you need to break it down to subtasks using `expand_task` / `task-master expand --id=<id> --force --research` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)) with appropriate flags like `--force` (to replace existing subtasks) and `--research`.
 -   Clear existing subtasks if needed using `clear_subtasks` / `task-master clear-subtasks --id=<id>` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)) before regenerating
 -   Implement code following task details, dependencies, and project standards
 -   Set task status to 'in-progress' using `set_task_status` / `task-master set-status --id=<id> --status=in-progress` when beginning work
 -   Move tasks through the configured workflow stages (pending → in-progress → review → done)
 -   For AI/agent completed tasks, set status to 'review' with `executor=agent` for initial verification
 -   For tasks requiring human validation, move to 'review' status with `executor=human`
--   Verify tasks according to test strategies before marking as complete (See [`tests.mdc`](mdc:.cursor/rules/tests.mdc))
+-   **CRITICAL**: Follow the Task Verification Workflow (see below) before marking tasks as complete
 -   Mark fully completed and verified tasks with `set_task_status` / `task-master set-status --id=<id> --status=done` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc))
 -   Update dependent tasks when implementation differs from original plan using `update` / `task-master update --from=<id> --prompt="..."` or `update_task` / `task-master update-task --id=<id> --prompt="..."` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc))
 -   Add new tasks discovered during implementation using `add_task` / `task-master add-task --prompt="..." --research` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)).
@@ -57,24 +60,246 @@ Task Master offers two primary ways to interact:
 -   Report progress regularly using `get_tasks` / `task-master list`
 -   Reorganize tasks as needed using `move_task` / `task-master move --from=<id> --to=<id>` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)) to change task hierarchy or ordering
 
-## Task Complexity Analysis
+## Task Breakdown Process
 
--   Run `analyze_project_complexity` / `task-master analyze-complexity --research` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)) for comprehensive analysis
--   Review complexity report via `complexity_report` / `task-master complexity-report` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)) for a formatted, readable version.
--   Focus on tasks with highest complexity scores (8-10) for detailed breakdown
--   Use analysis results to determine appropriate subtask allocation
--   Note that reports are automatically used by the `expand_task` tool/command
+
+
+
 
 ## Task Breakdown Process
 
--   Use `expand_task` / `task-master expand --id=<id>`. It automatically uses the complexity report if found, otherwise generates default number of subtasks.
--   Use `--num=<number>` to specify an explicit number of subtasks, overriding defaults or complexity report recommendations.
+-   Use `expand_task` / `task-master expand --id=<id>` to break down tasks into subtasks.
+-   Use `--num=<number>` to specify an explicit number of subtasks, overriding defaults.
 -   Add `--research` flag to leverage Perplexity AI for research-backed expansion.
 -   Add `--force` flag to clear existing subtasks before generating new ones (default is to append).
--   Use `--prompt="<context>"` to provide additional context when needed.
+-   Use `--subtasks="<json>"` to provide predefined subtasks directly, bypassing AI generation entirely.
+    - Subtasks must follow the required schema with fields: `id`, `title`, `description`, `dependencies`, `details`, `status`
+    - Optional fields include: `testStrategy`, `executor`, `verifications`, `results`, `metadata`
+    - Example: `--subtasks='[{"id":1,"title":"Setup","description":"Initial setup","dependencies":[],"details":"Create project structure","status":"pending"}]'`
+    - When using `--subtasks`, AI generation is skipped, making the operation much faster
 -   Review and adjust generated subtasks as necessary.
 -   Use `expand_all` tool or `task-master expand --all` to expand multiple pending tasks at once, respecting flags like `--force` and `--research`.
 -   If subtasks need complete replacement (regardless of the `--force` flag on `expand`), clear them first with `clear_subtasks` / `task-master clear-subtasks --id=<id>`.
+
+## Task Verification Workflow
+
+**CRITICAL RULE**: Before executing any task, you MUST follow this verification workflow to ensure task completion is properly validated.
+
+### Verification Process Overview
+
+1. **Check Existing Verifications**: Examine the task's `verifications` array
+2. **Verify Each Item**: Test each verification to determine if it passes
+3. **Update Verification Status**: Mark verifications as `passed: true` or `passed: false`
+4. **Execute Task Only If Needed**: Only implement the task if verifications fail
+
+### Detailed Verification Steps
+
+#### Step 1: Examine Task Verifications
+```javascript
+// Example task structure with verifications
+{
+  "id": 5,
+  "title": "Setup API Authentication",
+  "verifications": [
+    {
+      "description": "API endpoint /auth/login exists and responds",
+      "passed": false
+    },
+    {
+      "description": "Authentication middleware is properly configured",
+      "passed": false
+    },
+    {
+      "description": "JWT token generation works correctly",
+      "passed": false
+    }
+  ]
+}
+```
+
+#### Step 2: Verify Each Item Systematically
+
+**For each verification in the task's `verifications` array:**
+
+1. **Read the verification description carefully**
+2. **Test the specific condition described**
+3. **Determine if the verification passes based on factual evidence**
+4. **Update the verification status accordingly**
+
+**Verification Testing Methods:**
+- **Code Inspection**: Check if files, functions, or configurations exist
+- **Functional Testing**: Test endpoints, run code, verify behavior
+- **File System Checks**: Verify files exist in expected locations
+- **Configuration Validation**: Check settings and environment variables
+- **Integration Testing**: Verify components work together
+
+#### Step 3: Update Verification Status
+
+Use `update_task` or `update_subtask` to update verification status:
+
+```bash
+# Example: Update task verifications after testing
+task-master update-task --id=5 --prompt="Verification Results:
+1. API endpoint /auth/login - PASSED: Endpoint exists and returns 200
+2. Authentication middleware - FAILED: Middleware not configured
+3. JWT token generation - FAILED: No JWT implementation found
+
+Updated verifications array with current status."
+```
+
+#### Step 4: Decision Matrix
+
+**If ALL verifications pass (`passed: true`):**
+- ✅ **DO**: Update task results with verification summary
+- ✅ **DO**: Apply automatic status progression based on `defaultFlow`
+- ✅ **DO**: Read `.taskmaster/${currentTaskGroup}/config.json` and progress to next state
+- ❌ **DON'T**: Implement the task (it's already complete)
+
+**If ANY verifications fail (`passed: false`):**
+- ✅ **DO**: Proceed with task implementation
+- ✅ **DO**: Focus implementation on failing verifications
+- ✅ **DO**: Re-verify after implementation
+- ✅ **DO**: Update verification status to `passed: true` when fixed
+- ✅ **DO**: Apply automatic status progression after successful implementation
+
+**If verifications array is empty or missing:**
+- ✅ **DO**: Use the `testStrategy` field as verification guidance
+- ✅ **DO**: Follow normal implementation process
+- ✅ **DO**: Apply automatic status progression after task completion
+
+### Verification Examples
+
+#### Example 1: All Verifications Pass
+```bash
+# Check task verifications
+task-master show 5
+
+# Test each verification
+# 1. Check API endpoint: curl http://localhost:3000/auth/login ✅
+# 2. Check middleware: grep -r "authMiddleware" src/ ✅  
+# 3. Check JWT: npm list jsonwebtoken ✅
+
+# Update task with results
+task-master update-task --id=5 --prompt="All verifications confirmed:
+- API endpoint responds correctly
+- Authentication middleware found and configured  
+- JWT implementation verified
+Task is complete, no implementation needed."
+
+# Apply automatic status progression based on defaultFlow
+# (Read config.json, find current state, progress to next state)
+# Example: from "in-progress" -> "review" based on defaultFlow
+task-master set-status --id=5 --status=review --executor=agent
+```
+
+#### Example 2: Some Verifications Fail
+```bash
+# Check task verifications  
+task-master show 8
+
+# Test each verification
+# 1. Database connection: ❌ Connection fails
+# 2. User model exists: ✅ Model found
+# 3. Migration files: ❌ No migrations
+
+# Update verification status
+task-master update-task --id=8 --prompt="Verification Results:
+1. Database connection - FAILED: Connection timeout
+2. User model exists - PASSED: Found in models/User.js
+3. Migration files - FAILED: No migration directory found
+
+Need to implement database setup and migrations."
+
+# Proceed with implementation focusing on failed items
+# ... implement database connection and migrations ...
+
+# Re-verify after implementation
+# Update verifications to passed: true when complete
+
+# Apply automatic status progression after successful implementation
+# Read defaultFlow from config.json and progress to next state
+task-master set-status --id=8 --status=review --executor=agent
+```
+
+### Verification Best Practices
+
+#### Creating Effective Verifications
+- ✅ **DO**: Write specific, testable verification criteria
+- ✅ **DO**: Use factual, observable conditions
+- ✅ **DO**: Include both positive and negative test cases
+- ❌ **DON'T**: Write vague or subjective verifications
+- ❌ **DON'T**: Create verifications that can't be objectively tested
+
+#### Good Verification Examples
+```javascript
+// ✅ GOOD: Specific and testable
+{
+  "description": "HTTP server starts on port 3000 without errors",
+  "passed": false
+}
+
+// ✅ GOOD: File-based verification
+{
+  "description": "Configuration file config/database.js exists with valid JSON",
+  "passed": false  
+}
+
+// ✅ GOOD: Functional verification
+{
+  "description": "User registration endpoint returns 201 status for valid input",
+  "passed": false
+}
+```
+
+#### Poor Verification Examples
+```javascript
+// ❌ BAD: Too vague
+{
+  "description": "System works correctly",
+  "passed": false
+}
+
+// ❌ BAD: Subjective
+{
+  "description": "Code quality is good",
+  "passed": false
+}
+
+// ❌ BAD: Not testable
+{
+  "description": "Users will be happy with the interface",
+  "passed": false
+}
+```
+
+### Integration with Task Status
+
+**Status Progression with Verifications:**
+
+1. **`pending`** → Run verification workflow
+2. **`in-progress`** → Implement only if verifications fail
+3. **`review`** → Re-verify all items after implementation
+4. **`done`** → All verifications must pass
+
+**Verification Commands:**
+- Use `get_task` / `task-master show <id>` to view current verifications
+- Use `update_task` / `task-master update-task --id=<id>` to update verification status
+- Use `update_subtask` / `task-master update-subtask --id=<id>` for subtask verifications
+
+### Automation Integration
+
+**For AI Agents:**
+- Always check verifications before starting implementation
+- Update verification status based on actual testing results
+- Document verification process in task results
+- Only implement when verifications demonstrate need
+
+**For Human Developers:**
+- Use verifications as acceptance criteria
+- Test each verification manually or with automated tests
+- Update task with verification results before marking complete
+
+This verification workflow ensures that tasks are only implemented when actually needed and that completion is based on objective, testable criteria rather than assumptions.
 
 ## Implementation Drift Handling
 
@@ -88,8 +313,52 @@ Task Master offers two primary ways to interact:
 
 ### Default Task Flow
 
-Taskmaster supports configurable task flow states through the `defaultFlow` setting in `.taskmaster/config.json`.
-**important rule:** The task status update should always consider the `defaultFlow` value. If the current values of task.status and task.executor matches value in `defaultFlow`(`*` matches and value), you should find the next status of `defaultFlow` and update it using `set_task_status` / `task-master set-status --id=<taskId> --status={defaultFlow.nextItem.status} --executor="{defaultFlow.nextItem.executor}"`.
+Taskmaster supports configurable task flow states through the `defaultFlow` setting in `.taskmaster/${currentTaskGroup}/config.json`.
+
+**CRITICAL RULE - Automatic Status Progression After Task Execution:**
+
+After completing any task implementation or execution, you MUST automatically progress the task status according to the `defaultFlow` configuration:
+
+1. **Read Configuration**: Load the current task group's `.taskmaster/${currentTaskGroup}/config.json` file
+2. **Find Current State**: Locate the current task's `status` and `executor` in the `defaultFlow` array
+3. **Progress to Next State**: Update the task to the next status/executor combination in the flow
+4. **Apply Update**: Use `set_task_status` / `task-master set-status` to apply the progression
+
+**Implementation Pattern:**
+```bash
+# After completing task implementation/execution:
+# 1. Read the defaultFlow from config
+# 2. Find current state: {status: "in-progress", executor: "agent"}
+# 3. Progress to next state: {status: "review", executor: "agent"}
+# 4. Update the task
+task-master set-status --id=<taskId> --status=review --executor=agent
+```
+
+**Matching Rules:**
+- `*` in defaultFlow matches any value (wildcard)
+- Both `status` and `executor` must match the current task state
+- Progress to the immediate next item in the defaultFlow array
+- If no match found or at end of flow, keep current status
+
+**Example defaultFlow Configuration:**
+```json
+{
+  "defaultFlow": [
+    {"status": "pending", "executor": "*"},
+    {"status": "in-progress", "executor": "agent"},
+    {"status": "review", "executor": "agent"},
+    {"status": "done", "executor": "*"}
+  ]
+}
+```
+
+**When to Apply:**
+- ✅ **DO**: Apply after completing task implementation
+- ✅ **DO**: Apply after verifying all task verifications pass
+- ✅ **DO**: Apply after successful subtask completion
+- ✅ **DO**: Apply when transitioning from any workflow state
+- ❌ **DON'T**: Apply if task is already at the final state in defaultFlow
+- ❌ **DON'T**: Apply if no matching state found in defaultFlow
 
 ### Status Usage Guidelines
 
@@ -246,9 +515,11 @@ Once a task has been broken down into subtasks using `expand_task` or similar me
     *   Create new or update existing rules following internal guidelines (previously linked to `cursor_rules.mdc` and `self_improve.mdc`).
 
 8.  **Progress Through Workflow:**
-    *   For AI/agent completed implementation, set status to 'review' with agent executor: `set_task_status` / `task-master set-status --id=<subtaskId> --status=review --executor=agent`
-    *   For tasks requiring human validation or approval, set status to 'review' with human executor: `set_task_status` / `task-master set-status --id=<subtaskId> --status=review --executor=human`
-    *   After verifying the implementation and updating any necessary rules, mark the subtask as completed: `set_task_status` / `task-master set-status --id=<subtaskId> --status=done`
+    *   **CRITICAL**: After completing implementation, apply automatic status progression based on `defaultFlow`
+    *   Read the current task group's `.taskmaster/${currentTaskGroup}/config.json` file to get the `defaultFlow` configuration
+    *   Find the current task state (`status` and `executor`) in the `defaultFlow` array
+    *   Progress to the next state in the flow using: `set_task_status` / `task-master set-status --id=<subtaskId> --status={nextStatus} --executor={nextExecutor}`
+    *   Example progression: `in-progress` + `agent` → `review` + `agent` → `done` + `*`
 
 9.  **Commit Changes (If using Git):**
     *   Stage the relevant code changes and any updated/new rule files (`git add .`).

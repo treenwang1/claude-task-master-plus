@@ -1,5 +1,5 @@
 
-import { addComplexityToTask, readJSON, readComplexityReport } from '../utils.js';
+import { readJSON } from '../utils.js';
 import { getTaskGroupTasksFile, getTaskGroupComplexityReportFile, getWorkingTaskGroup } from '../../../src/constants/paths.js';
 import { findProjectRoot } from '../../../src/utils/path-utils.js';
 
@@ -18,7 +18,7 @@ function findNextTaskFromRootPath(rootPath = null) {
 		throw new Error(`No valid tasks found in ${tasksPath}`); // TODO: Handle this better
 	}
 	const complexityReportFile = getTaskGroupComplexityReportFile(getWorkingTaskGroup(rootPath));
-	const complexityReport = readComplexityReport(complexityReportFile);
+	const complexityReport = null; // Complexity analysis removed
 	return findNextTask(data.tasks, complexityReport);
 }
 /**
@@ -122,10 +122,7 @@ function findNextTask(tasks, complexityReport = null) {
 		});
 		const nextTask = candidateSubtasks[0];
 
-		// Add complexity to the task before returning
-		if (nextTask && complexityReport) {
-			addComplexityToTask(nextTask, complexityReport);
-		}
+		// Complexity analysis removed
 
 		return nextTask;
 	}
@@ -157,10 +154,7 @@ function findNextTask(tasks, complexityReport = null) {
 		return a.id - b.id;
 	})[0];
 
-	// Add complexity to the task before returning
-	if (nextTask && complexityReport) {
-		addComplexityToTask(nextTask, complexityReport);
-	}
+	// Complexity analysis removed
 
 	return nextTask;
 }

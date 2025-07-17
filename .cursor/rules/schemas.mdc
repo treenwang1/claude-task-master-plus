@@ -1,0 +1,150 @@
+# Centralized Schema Guidelines
+
+## Schema Organization
+
+- **Centralized Location**: All shared Zod schemas are located in [`src/schemas/task-schemas.js`](mdc:src/schemas/task-schemas.js)
+- **Single Source of Truth**: Schema definitions should exist in only one place to ensure consistency
+- **Reusable Components**: Break down complex schemas into reusable components (e.g., `verificationSchema`, `metadataSchema`)
+
+## Available Schemas
+
+### Core Schemas
+- ✅ **`subtaskSchema`**: For individual subtask validation
+- ✅ **`subtaskArraySchema`**: For arrays of subtasks
+- ✅ **`subtaskWrapperSchema`**: For AI responses containing subtasks
+- ✅ **`taskSchema`**: For individual task validation (PRD parsing, task creation)
+- ✅ **`taskArraySchema`**: For arrays of tasks
+- ✅ **`aiTaskDataSchema`**: For AI-generated task data (add-task functionality)
+- ✅ **`updatedTaskSchema`**: For task updates (more flexible validation)
+- ✅ **`prdResponseSchema`**: For PRD parsing AI responses
+- ✅ **`providedTasksSchema`**: For validating provided tasks arrays
+
+### Component Schemas
+- ✅ **`verificationSchema`**: For verification objects
+- ✅ **`metadataFieldSchema`**: For metadata field definitions
+- ✅ **`metadataSchema`**: For task/subtask metadata
+- ✅ **`taskGroupLinkageSchema`**: For task group relationships
+
+## Usage Guidelines
+
+### Import Pattern
+```javascript
+// ✅ DO: Import specific schemas needed
+import { 
+    subtaskSchema, 
+    subtaskArraySchema, 
+    taskSchema 
+} from '../../../src/schemas/task-schemas.js';
+
+// ❌ DON'T: Import all schemas with wildcard
+import * as schemas from '../../../src/schemas/task-schemas.js';
+```
+
+### Schema Reuse
+```javascript
+// ✅ DO: Use centralized schemas
+import { subtaskSchema } from '../../../src/schemas/task-schemas.js';
+
+const myTool = z.object({
+    subtasks: z.array(subtaskSchema).optional()
+});
+
+// ❌ DON'T: Duplicate schema definitions
+const duplicateSubtaskSchema = z.object({
+    id: z.number().int().positive(),
+    title: z.string().min(5),
+    // ... duplicated fields
+});
+```
+
+### Schema Validation
+```javascript
+// ✅ DO: Use consistent validation patterns
+try {
+    const validatedSubtasks = subtaskArraySchema.parse(rawSubtasks);
+    return { success: true, data: validatedSubtasks };
+} catch (error) {
+    return { success: false, error: error.message };
+}
+
+// ✅ DO: Use safeParse for non-throwing validation
+const result = subtaskSchema.safeParse(rawSubtask);
+if (result.success) {
+    // Use result.data
+} else {
+    // Handle result.error
+}
+```
+
+## File-Specific Guidelines
+
+### MCP Tools (`mcp-server/src/tools/*.js`)
+- ✅ **DO**: Import schemas from centralized location
+- ✅ **DO**: Use schemas for parameter validation in tool definitions
+- ❌ **DON'T**: Define inline schemas that duplicate existing ones
+
+### Core Logic (`scripts/modules/task-manager/*.js`)
+- ✅ **DO**: Use centralized schemas for AI response validation
+- ✅ **DO**: Import appropriate schema variants (e.g., `updatedTaskSchema` for updates)
+- ❌ **DON'T**: Create custom schemas for standard task/subtask structures
+
+### Direct Functions (`mcp-server/src/core/direct-functions/*.js`)
+- ✅ **DO**: Use centralized schemas for data validation
+- ✅ **DO**: Pass validated data to core functions
+- ❌ **DON'T**: Skip validation assuming data is already validated
+
+## Schema Modification Guidelines
+
+### Adding New Schemas
+1. **Add to centralized file**: Define new schemas in [`src/schemas/task-schemas.js`](mdc:src/schemas/task-schemas.js)
+2. **Export properly**: Use named exports for all schemas
+3. **Document purpose**: Add clear comments explaining schema usage
+4. **Use components**: Build on existing component schemas when possible
+
+### Modifying Existing Schemas
+1. **Consider impact**: Schema changes affect all consumers
+2. **Use backward compatibility**: Add optional fields rather than breaking changes
+3. **Update all consumers**: Ensure all imports still work after changes
+4. **Test thoroughly**: Validate schema changes don't break existing functionality
+
+## Common Patterns
+
+### Flexible vs Strict Validation
+```javascript
+// For AI responses (strict validation)
+const result = subtaskSchema.parse(aiResponse);
+
+// For updates (flexible validation)
+const result = updatedTaskSchema.parse(userInput);
+```
+
+### Schema Composition
+```javascript
+// ✅ DO: Build complex schemas from components
+const customTaskSchema = taskSchema.extend({
+    customField: z.string().optional()
+});
+
+// ✅ DO: Use existing component schemas
+const myMetadata = metadataSchema.extend({
+    additionalField: z.string()
+});
+```
+
+## Benefits of Centralization
+
+- **Consistency**: All parts of the application use the same validation rules
+- **Maintainability**: Schema changes only need to be made in one place
+- **Reusability**: Common patterns can be shared across different modules
+- **Type Safety**: Centralized schemas provide consistent type definitions
+- **Debugging**: Easier to trace validation issues to a single source
+
+## Anti-Patterns to Avoid
+
+- ❌ **DON'T**: Duplicate schema definitions across files
+- ❌ **DON'T**: Create inline schemas for standard task/subtask structures
+- ❌ **DON'T**: Skip validation assuming data is already validated
+- ❌ **DON'T**: Modify schemas without considering impact on all consumers
+- ❌ **DON'T**: Use different validation rules for the same data structure
+
+Following these guidelines ensures consistent data validation across the entire Task Master application while maintaining a single source of truth for schema definitions.

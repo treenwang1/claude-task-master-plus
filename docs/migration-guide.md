@@ -17,7 +17,7 @@ your-project/
 ├── scripts/                  # PRD and reports
 │   ├── prd.md
 │   ├── example_prd.md
-│   └── task-complexity-report.json
+│   └── task-report.json
 ├── .taskmasterconfig         # Configuration
 └── ... (your project files)
 ```
@@ -36,7 +36,7 @@ your-project/
 │   │   ├── docs/                # Project documentation
 │   │   │   └── prd.md
 │   │   ├── reports/             # Generated reports
-│   │   │   └── task-complexity-report.json
+│   │   │   └── task-report.json
 │   │   └── templates/           # Example/template files
 │   │       └── example_prd.md
 │   ├── taskgroup1  
@@ -47,7 +47,7 @@ your-project/
 │   │   ├── docs/                # Project documentation
 │   │   │   └── prd.md
 │   │   ├── reports/             # Generated reports
-│   │   │   └── task-complexity-report.json
+│   │   │   └── task-report.json
 │   │   └── templates/           # Example/template files
 │   │       └── example_prd.md
 └── ... (your project files)
@@ -115,7 +115,7 @@ If you prefer to migrate manually:
    mv scripts/example_prd.md .taskmaster/templates/
 
    # Move reports (if they exist)
-   mv scripts/task-complexity-report.json .taskmaster/reports/ 2>/dev/null || true
+   mv scripts/task-report.json .taskmaster/reports/ 2>/dev/null || true
    ```
 
 3. **Clean up empty directories:**

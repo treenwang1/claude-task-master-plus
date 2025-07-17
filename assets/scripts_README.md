@@ -65,8 +65,6 @@ Task Master configuration is now managed through two primary methods:
    - `clear-subtasks`: Remove subtasks from specified tasks
    - `next`: Determine the next task to work on based on dependencies
    - `show`: Display detailed information about a specific task
-   - `analyze-complexity`: Analyze task complexity and generate recommendations
-   - `complexity-report`: Display the complexity analysis in a readable format
    - `add-dependency`: Add a dependency between tasks
    - `remove-dependency`: Remove a dependency from a task
    - `validate-dependencies`: Check for invalid dependencies
@@ -299,27 +297,6 @@ This command:
    - List of all individual fixes made
 
 This is especially useful when tasks have been deleted or IDs have changed, potentially breaking dependency chains.
-
-## Analyzing Task Complexity
-
-The `analyze-complexity` command allows you to automatically assess task complexity and generate expansion recommendations:
-
-```bash
-# Analyze all tasks and generate expansion recommendations
-task-master analyze-complexity
-
-# Specify a custom output file
-task-master analyze-complexity --output=custom-report.json
-
-# Override the model used for analysis
-task-master analyze-complexity --model=claude-3-opus-20240229
-
-# Set a custom complexity threshold (1-10)
-task-master analyze-complexity --threshold=6
-
-# Use Perplexity AI for research-backed complexity analysis
-task-master analyze-complexity --research
-```
 
 Notes:
 

@@ -320,7 +320,7 @@ For features requiring components in multiple modules:
 ## Command-Line Interface Standards
 
 - **Naming Conventions**:
-  - Use kebab-case for command names (`analyze-complexity`, not `analyzeComplexity`)
+  - Use kebab-case for command names (`expand-task`, not `expandTask`)
   - Use kebab-case for option names (`--output-format`, not `--outputFormat`) 
   - Use the same option names across commands when they represent the same concept
 

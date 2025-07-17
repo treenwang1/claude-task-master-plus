@@ -17,13 +17,13 @@ import { registerExpandTaskTool } from './expand-task.js';
 import { registerAddTaskTool } from './add-task.js';
 import { registerAddSubtaskTool } from './add-subtask.js';
 import { registerRemoveSubtaskTool } from './remove-subtask.js';
-import { registerAnalyzeProjectComplexityTool } from './analyze.js';
+
 import { registerClearSubtasksTool } from './clear-subtasks.js';
 import { registerExpandAllTool } from './expand-all.js';
 import { registerRemoveDependencyTool } from './remove-dependency.js';
 import { registerValidateDependenciesTool } from './validate-dependencies.js';
 import { registerFixDependenciesTool } from './fix-dependencies.js';
-import { registerComplexityReportTool } from './complexity-report.js';
+
 import { registerAddDependencyTool } from './add-dependency.js';
 import { registerRemoveTaskTool } from './remove-task.js';
 import { registerInitializeProjectTool } from './initialize-project.js';
@@ -47,7 +47,7 @@ export function registerTaskMasterTools(server) {
 		registerListTasksTool(server);
 		registerShowTaskTool(server);
 		registerNextTaskTool(server);
-		registerComplexityReportTool(server);
+
 
 		// Group 3: Task Status & Management
 		registerSetTaskStatusTool(server);
@@ -65,7 +65,7 @@ export function registerTaskMasterTools(server) {
 		registerMoveTaskTool(server);
 
 		// Group 5: Task Analysis & Expansion
-		registerAnalyzeProjectComplexityTool(server);
+		
 		registerExpandTaskTool(server);
 		registerExpandAllTool(server);
 

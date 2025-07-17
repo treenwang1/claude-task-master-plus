@@ -28,22 +28,7 @@ import {
 	isApiKeySet // Keep this check
 } from '../config-manager.js';
 import generateTaskFiles from './generate-task-files.js';
-
-// Zod schema for post-parsing validation of the updated task object
-const updatedTaskSchema = z
-	.object({
-		id: z.number().int(),
-		title: z.string(), // Title should be preserved, but check it exists
-		description: z.string(),
-		status: z.string(),
-		dependencies: z.array(z.union([z.number().int(), z.string()])),
-		priority: z.string().optional(),
-		details: z.string().optional(),
-		testStrategy: z.string().optional(),
-		executor: z.enum(['agent', 'human']).optional().default('agent'),
-		subtasks: z.array(z.any()).optional()
-	})
-	.strip(); // Allows parsing even if AI adds extra fields, but validation focuses on schema
+import { updatedTaskSchema } from '../../../src/schemas/task-schemas.js'; // Allows parsing even if AI adds extra fields, but validation focuses on schema
 
 /**
  * Parses a single updated task object from AI's text response.

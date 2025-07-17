@@ -5,9 +5,7 @@ import Table from 'cli-table3';
 import {
 	log,
 	readJSON,
-	truncate,
-	readComplexityReport,
-	addComplexityToTask
+	truncate
 } from '../utils.js';
 import findNextTask from './find-next-task.js';
 
@@ -42,11 +40,8 @@ function listTasks(
 		}
 
 		// Add complexity scores to tasks if report exists
-		const complexityReport = readComplexityReport(reportPath);
-		// Apply complexity scores to tasks
-		if (complexityReport && complexityReport.complexityAnalysis) {
-			data.tasks.forEach((task) => addComplexityToTask(task, complexityReport));
-		}
+		const complexityReport = null; // Complexity analysis removed
+		// Complexity analysis removed
 
 		// Filter tasks by status if specified
 		const filteredTasks =
@@ -616,8 +611,7 @@ function listTasks(
 								// Default to regular task dependency
 								const depTask = data.tasks.find((t) => t.id === depId);
 								if (depTask) {
-									// Add complexity to depTask before checking status
-									addComplexityToTask(depTask, complexityReport);
+									// Complexity analysis removed
 									const isDone =
 										depTask.status === 'done' || depTask.status === 'completed';
 									const isInProgress = depTask.status === 'in-progress';
@@ -725,8 +719,7 @@ function listTasks(
 				subtasksSection = `\n\n${chalk.white.bold('Subtasks:')}\n`;
 				subtasksSection += parentTaskForSubtasks.subtasks
 					.map((subtask) => {
-						// Add complexity to subtask before display
-						addComplexityToTask(subtask, complexityReport);
+						// Complexity analysis removed
 						// Using a more simplified format for subtask status display
 						const status = subtask.status || 'pending';
 						const statusColors = {

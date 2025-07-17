@@ -18,79 +18,11 @@ import { generateObjectService } from '../ai-services-unified.js';
 import { getDebugFlag } from '../config-manager.js';
 import generateTaskFiles from './generate-task-files.js';
 import { displayAiUsageSummary } from '../ui.js';
-
-// Define the Zod schema for a SINGLE task object
-const prdSingleTaskSchema = z.object({
-	id: z.number().int().positive(),
-	title: z.string().min(1),
-	description: z.string().min(1),
-	details: z.string().optional().default(''),
-	testStrategy: z.string().optional().default(''),
-	priority: z.enum(['high', 'medium', 'low']).default('medium'),
-	dependencies: z.array(z.number().int().positive()).optional().default([]),
-	status: z.string().optional().default('pending'),
-	executor: z.enum(['agent', 'human']).optional().default('agent'),
-	verifications: z
-		.array(z.object({
-			description: z.string().describe('Description of what to verify'),
-			passed: z.boolean().describe('Whether this verification has passed')
-		}))
-		.optional()
-		.default([])
-		.describe('Array of verification steps to check if the task is completed correctly'),
-	results: z
-		.string()
-		.optional()
-		.default('')
-		.describe('Results or outcomes of the task execution'),
-	metadata: z
-		.object({
-			fields: z
-				.array(z.object({
-					key: z.string().describe('Field key'),
-					label: z.string().describe('Field label'),
-					type: z.string().describe('Field input type'),
-					description: z.string().describe('Field description'),
-					required: z.boolean().describe('Whether field is required'),
-					enum: z.array(z.string()).optional().describe('Enum values for select fields')
-				}))
-				.optional()
-				.describe('Custom fields for this task'),
-			mcp: z
-				.array(z.string())
-				.optional()
-				.describe('MCP servers required for this task'),
-			linksTo: z
-				.object({
-					taskGroup: z.string().describe('Task group this task links to')
-				})
-				.optional()
-				.describe('Task group linkage'),
-			linkedBy: z
-				.object({
-					taskGroup: z.string().describe('Task group linked by this task')
-				})
-				.optional()
-				.describe('Task group linked by this task')
-		})
-		.optional()
-		.default({})
-		.describe('Metadata for task configuration and relationships')
-});
-
-// Define the Zod schema for the ENTIRE expected AI response object
-const prdResponseSchema = z.object({
-	tasks: z.array(prdSingleTaskSchema),
-	metadata: z.object({
-		projectName: z.string(),
-		totalTasks: z.number(),
-		sourceFile: z.string(),
-		generatedAt: z.string()
-	})
-});
-
-// Define the Zod schema for validating provided tasks array
-const providedTasksSchema = z.array(prdSingleTaskSchema);
+import { 
+	taskSchema, 
+	prdResponseSchema, 
+	providedTasksSchema 
+} from '../../../src/schemas/task-schemas.js';
 
 /**
  * Parse a PRD file and generate tasks

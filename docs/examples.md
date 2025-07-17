@@ -68,18 +68,6 @@ task-master move --from=12 --to=18
 
 )
 
-## Analyzing complexity
-
-```
-Can you analyze the complexity of our tasks to help me understand which ones need to be broken down further?
-```
-
-## Viewing complexity report
-
-```
-Can you show me the complexity report in a more readable format?
-```
-
 ### Breaking Down Complex Tasks
 
 ```

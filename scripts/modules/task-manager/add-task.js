@@ -18,77 +18,7 @@ import { readJSON, writeJSON, log as consoleLog, truncate, shiftTaskIds } from '
 import { generateObjectService } from '../ai-services-unified.js';
 import { getDefaultPriority } from '../config-manager.js';
 import generateTaskFiles from './generate-task-files.js';
-
-// Define Zod schema for the expected AI output object
-const AiTaskDataSchema = z.object({
-	title: z.string().describe('Clear, concise title for the task'),
-	description: z
-		.string()
-		.describe('A one or two sentence description of the task'),
-	details: z
-		.string()
-		.describe('In-depth implementation details, considerations, and guidance'),
-	testStrategy: z
-		.string()
-		.describe('Detailed approach for verifying task completion'),
-	dependencies: z
-		.array(z.number())
-		.optional()
-		.describe(
-			'Array of task IDs that this task depends on (must be completed before this task can start)'
-		),
-	assignees: z
-		.array(z.string())
-		.optional()
-		.describe('Array of people or teams assigned to this task (usernames, emails, or team names)'),
-	executor: z
-		.enum(['agent', 'human'])
-		.optional()
-		.describe('Who should execute this task: "agent" for AI agents to handle automatically, "human" for manual execution by humans. Defaults to "agent".'),
-	verifications: z
-		.array(z.object({
-			description: z.string().describe('Description of what to verify'),
-			passed: z.boolean().describe('Whether this verification has passed')
-		}))
-		.optional()
-		.describe('Array of verification steps to check if the task is completed correctly'),
-	results: z
-		.string()
-		.optional()
-		.describe('Results or outcomes of the task execution'),
-	metadata: z
-		.object({
-			fields: z
-				.array(z.object({
-					key: z.string().describe('Field key'),
-					label: z.string().describe('Field label'),
-					type: z.string().describe('Field input type'),
-					description: z.string().describe('Field description'),
-					required: z.boolean().describe('Whether field is required'),
-					enum: z.array(z.string()).optional().describe('Enum values for select fields')
-				}))
-				.optional()
-				.describe('Custom fields for this task'),
-			mcp: z
-				.array(z.string())
-				.optional()
-				.describe('MCP servers required for this task'),
-			linksTo: z
-				.object({
-					taskGroup: z.string().describe('Task group this task links to')
-				})
-				.optional()
-				.describe('Task group linkage'),
-			linkedBy: z
-				.object({
-					taskGroup: z.string().describe('Task group linked by this task')
-				})
-				.optional()
-				.describe('Task group linked by this task')
-		})
-		.optional()
-		.describe('Metadata for task configuration and relationships')
-});
+import { aiTaskDataSchema } from '../../../src/schemas/task-schemas.js';
 
 /**
  * Add a new task using AI
@@ -990,7 +920,7 @@ async function addTask(
 					role: serviceRole,
 					session: session,
 					projectRoot: projectRoot,
-					schema: AiTaskDataSchema,
+					schema: aiTaskDataSchema,
 					objectName: 'newTaskData',
 					systemPrompt: systemPrompt,
 					prompt: userPrompt,

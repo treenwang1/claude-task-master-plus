@@ -76,42 +76,5 @@ describe('Task Finder', () => {
 			expect(result.task.id).toBe(2);
 			expect(result.task.complexityScore).toBeUndefined();
 		});
-
-		test('should include complexity score when report is provided', () => {
-			// Define the complexity report for this test
-			const complexityReport = {
-				meta: {
-					generatedAt: '2023-01-01T00:00:00.000Z',
-					tasksAnalyzed: 3,
-					thresholdScore: 5
-				},
-				complexityAnalysis: [
-					{
-						taskId: 1,
-						taskTitle: 'Initialize Project',
-						complexityScore: 3,
-						recommendedSubtasks: 2
-					},
-					{
-						taskId: 2,
-						taskTitle: 'Create Core Functionality',
-						complexityScore: 8,
-						recommendedSubtasks: 5
-					},
-					{
-						taskId: 3,
-						taskTitle: 'Implement UI Components',
-						complexityScore: 6,
-						recommendedSubtasks: 4
-					}
-				]
-			};
-
-			const result = findTaskById(sampleTasks.tasks, 2, complexityReport);
-
-			expect(result.task).toBeDefined();
-			expect(result.task.id).toBe(2);
-			expect(result.task.complexityScore).toBe(8);
-		});
 	});
 });

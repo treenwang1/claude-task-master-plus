@@ -35,6 +35,13 @@ globs: "**/*.test.js,tests/**/*"
   - Keep fixtures small and representative
   - Export fixtures as named exports for reuse
 
+- **Verification Tests**
+  - Test task verification workflows and validation logic
+  - Verify that verification criteria are properly evaluated
+  - Test both passing and failing verification scenarios
+  - Mock external dependencies (APIs, file system, etc.) for verification tests
+  - Example naming: `task-verification.test.js`, `verification-workflow.test.js`
+
 ## Test File Organization
 
 ```javascript
@@ -883,10 +890,345 @@ When testing ES modules or working with complex module imports, you may encounte
     // Local test implementation instead of importing from module
     const testLog = (level, message) => {
       if (false) return; // Always non-silent for this test
-      mockConsole(level, message);
-    };
-    
-    testLog('info', 'test message');
-    expect(mockConsole).toHaveBeenCalledWith('info', 'test message');
+
+## Task Verification Testing
+
+### Testing Verification Workflows
+
+- **Verification Testing Structure**:
+  - ✅ **DO**: Test verification logic independently from task implementation
+  - ✅ **DO**: Mock external dependencies (APIs, file system, databases) for verification tests
+  - ✅ **DO**: Test both passing and failing verification scenarios
+  - ✅ **DO**: Verify that verification status is properly updated
+  - ❌ **DON'T**: Skip testing verification edge cases
+
+  ```javascript
+  // ✅ DO: Test verification workflow systematically
+  describe('Task Verification Workflow', () => {
+    beforeEach(() => {
+      // Mock external dependencies
+      jest.clearAllMocks();
+      mockFs.reset();
+      mockAxios.reset();
+    });
+
+    test('should mark task as done when all verifications pass', async () => {
+      const task = {
+        id: 1,
+        title: 'Setup API',
+        verifications: [
+          { description: 'API endpoint /health responds with 200', passed: false },
+          { description: 'Configuration file exists', passed: false }
+        ]
+      };
+
+      // Mock successful verification tests
+      mockAxios.get.mockResolvedValue({ status: 200 });
+      mockFs.existsSync.mockReturnValue(true);
+
+      const result = await verifyTask(task);
+      
+      expect(result.status).toBe('done');
+      expect(result.verifications.every(v => v.passed)).toBe(true);
+    });
+
+    test('should proceed with implementation when verifications fail', async () => {
+      const task = {
+        id: 1,
+        title: 'Setup API',
+        verifications: [
+          { description: 'API endpoint /health responds with 200', passed: false },
+          { description: 'Configuration file exists', passed: false }
+        ]
+      };
+
+      // Mock failed verification tests
+      mockAxios.get.mockRejectedValue(new Error('Connection refused'));
+      mockFs.existsSync.mockReturnValue(false);
+
+      const result = await verifyTask(task);
+      
+      expect(result.status).toBe('in-progress');
+      expect(result.verifications.every(v => !v.passed)).toBe(true);
+    });
   });
-  ``` 
+  ```
+
+- **Verification Test Patterns**:
+  - ✅ **DO**: Create reusable verification test utilities
+  - ✅ **DO**: Test different types of verifications (API, file system, configuration)
+  - ✅ **DO**: Verify that verification results are properly recorded
+  - ❌ **DON'T**: Make real API calls or file system operations in verification tests
+
+  ```javascript
+  // ✅ DO: Create verification test utilities
+  const createVerificationTest = (description, testFunction) => ({
+    description,
+    passed: false,
+    testFunction
+  });
+
+  const mockVerificationTests = {
+    apiEndpoint: jest.fn(),
+    fileExists: jest.fn(),
+    configValid: jest.fn(),
+    functionBehavior: jest.fn()
+  };
+
+  // ✅ DO: Test different verification types
+  describe('Verification Types', () => {
+    test('should test API endpoint verifications', async () => {
+      const verification = createVerificationTest(
+        'API endpoint /users responds with 200',
+        mockVerificationTests.apiEndpoint
+      );
+
+      mockVerificationTests.apiEndpoint.mockResolvedValue(true);
+      
+      const result = await testVerification(verification);
+      expect(result.passed).toBe(true);
+      expect(mockVerificationTests.apiEndpoint).toHaveBeenCalledWith('/users');
+    });
+
+    test('should test file existence verifications', async () => {
+      const verification = createVerificationTest(
+        'Configuration file config/app.js exists',
+        mockVerificationTests.fileExists
+      );
+
+      mockVerificationTests.fileExists.mockReturnValue(true);
+      
+      const result = await testVerification(verification);
+      expect(result.passed).toBe(true);
+      expect(mockVerificationTests.fileExists).toHaveBeenCalledWith('config/app.js');
+    });
+  });
+  ```
+
+- **Integration with Task Status Testing**:
+  - ✅ **DO**: Test that task status changes properly based on verification results
+  - ✅ **DO**: Verify that task results are updated with verification summaries
+  - ✅ **DO**: Test that failed verifications prevent task completion
+  - ❌ **DON'T**: Allow tasks to be marked as done without verification
+
+  ```javascript
+  // ✅ DO: Test task status integration with verifications
+  describe('Task Status and Verification Integration', () => {
+    test('should prevent marking task as done when verifications fail', async () => {
+      const task = {
+        id: 1,
+        title: 'Setup Database',
+        status: 'in-progress',
+        verifications: [
+          { description: 'Database connection works', passed: false }
+        ]
+      };
+
+      // Mock failed verification
+      mockDb.connect.mockRejectedValue(new Error('Connection failed'));
+
+      await expect(setTaskStatus(task.id, 'done')).rejects.toThrow(
+        'Cannot mark task as done. Failing verifications: Database connection works'
+      );
+    });
+
+    test('should allow marking task as done when all verifications pass', async () => {
+      const task = {
+        id: 1,
+        title: 'Setup Database',
+        status: 'in-progress',
+        executor: 'agent',
+        verifications: [
+          { description: 'Database connection works', passed: true }
+        ]
+      };
+
+      // Mock config with defaultFlow
+      const mockConfig = {
+        defaultFlow: [
+          { status: 'pending', executor: '*' },
+          { status: 'in-progress', executor: 'agent' },
+          { status: 'review', executor: 'agent' },
+          { status: 'done', executor: '*' }
+        ]
+      };
+      mockFs.readFileSync.mockReturnValue(JSON.stringify(mockConfig));
+
+      const result = await setTaskStatus(task.id, 'done');
+      
+      expect(result.status).toBe('done');
+      expect(result.results).toContain('All verifications passed');
+    });
+  });
+  ```
+
+- **Verification Mock Patterns**:
+  - ✅ **DO**: Create comprehensive mocks for verification testing
+  - ✅ **DO**: Mock at the appropriate abstraction level
+  - ✅ **DO**: Use consistent mock patterns across verification tests
+  - ❌ **DON'T**: Mix real and mocked dependencies in verification tests
+
+  ```javascript
+  // ✅ DO: Create comprehensive verification mocks
+  const mockVerificationDependencies = {
+    // API mocks
+    axios: {
+      get: jest.fn(),
+      post: jest.fn(),
+      put: jest.fn(),
+      delete: jest.fn()
+    },
+    
+    // File system mocks
+    fs: {
+      existsSync: jest.fn(),
+      readFileSync: jest.fn(),
+      writeFileSync: jest.fn(),
+      statSync: jest.fn()
+    },
+    
+    // Database mocks
+    db: {
+      connect: jest.fn(),
+      query: jest.fn(),
+      close: jest.fn()
+    },
+    
+    // Process mocks
+    child_process: {
+      exec: jest.fn(),
+      spawn: jest.fn()
+    }
+  };
+
+  // ✅ DO: Setup verification test environment
+  beforeEach(() => {
+    // Reset all mocks
+    Object.values(mockVerificationDependencies).forEach(mockGroup => {
+      Object.values(mockGroup).forEach(mock => {
+        if (jest.isMockFunction(mock)) {
+          mock.mockReset();
+        }
+      });
+    });
+  });
+  ```
+
+This verification testing framework ensures that task verification workflows are thoroughly tested and that verification logic is reliable and maintainable.
+
+## Automatic Status Progression Testing
+
+- **DefaultFlow Configuration Testing**:
+  - ✅ **DO**: Test automatic status progression based on defaultFlow configuration
+  - ✅ **DO**: Test wildcard matching in defaultFlow
+  - ✅ **DO**: Test edge cases (final state, missing config, invalid flow)
+  - ❌ **DON'T**: Skip testing the automatic progression workflow
+
+  ```javascript
+  // ✅ DO: Test automatic status progression
+  describe('Automatic Status Progression', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      mockFs.reset();
+    });
+
+    test('should automatically progress task status based on defaultFlow', async () => {
+      const task = {
+        id: 1,
+        title: 'Setup API',
+        status: 'in-progress',
+        executor: 'agent'
+      };
+
+      // Mock config with defaultFlow
+      const mockConfig = {
+        defaultFlow: [
+          { status: 'pending', executor: '*' },
+          { status: 'in-progress', executor: 'agent' },
+          { status: 'review', executor: 'agent' },
+          { status: 'done', executor: '*' }
+        ]
+      };
+      mockFs.readFileSync.mockReturnValue(JSON.stringify(mockConfig));
+
+      // Complete task implementation (triggers automatic progression)
+      const result = await completeTaskImplementation(task);
+      
+      // Should progress from 'in-progress' to 'review' based on defaultFlow
+      expect(result.status).toBe('review');
+      expect(result.executor).toBe('agent');
+    });
+
+    test('should not progress if task is at final state in defaultFlow', async () => {
+      const task = {
+        id: 1,
+        title: 'Setup API',
+        status: 'done',
+        executor: 'agent'
+      };
+
+      // Mock config with defaultFlow
+      const mockConfig = {
+        defaultFlow: [
+          { status: 'pending', executor: '*' },
+          { status: 'in-progress', executor: 'agent' },
+          { status: 'review', executor: 'agent' },
+          { status: 'done', executor: '*' }
+        ]
+      };
+      mockFs.readFileSync.mockReturnValue(JSON.stringify(mockConfig));
+
+      const result = await completeTaskImplementation(task);
+      
+      // Should remain at 'done' status (final state)
+      expect(result.status).toBe('done');
+    });
+
+    test('should handle wildcard matching in defaultFlow', async () => {
+      const task = {
+        id: 1,
+        title: 'Setup API',
+        status: 'pending',
+        executor: 'human'
+      };
+
+      // Mock config with defaultFlow using wildcards
+      const mockConfig = {
+        defaultFlow: [
+          { status: 'pending', executor: '*' },
+          { status: 'in-progress', executor: '*' },
+          { status: 'done', executor: '*' }
+        ]
+      };
+      mockFs.readFileSync.mockReturnValue(JSON.stringify(mockConfig));
+
+      const result = await completeTaskImplementation(task);
+      
+      // Should progress from 'pending' to 'in-progress', preserving executor
+      expect(result.status).toBe('in-progress');
+      expect(result.executor).toBe('human'); // Preserved from original
+    });
+
+    test('should handle missing or invalid defaultFlow configuration', async () => {
+      const task = {
+        id: 1,
+        title: 'Setup API',
+        status: 'in-progress',
+        executor: 'agent'
+      };
+
+      // Mock missing config file
+      mockFs.readFileSync.mockImplementation(() => {
+        throw new Error('Config file not found');
+      });
+
+      const result = await completeTaskImplementation(task);
+      
+      // Should complete without progression if config cannot be read
+      expect(result.status).toBe('in-progress'); // Status unchanged
+      expect(result.executor).toBe('agent');
+    });
+  });
+  ```
+
+**This comprehensive testing approach ensures that the verification system works correctly, integrates properly with the task management workflow, and handles automatic status progression according to the defaultFlow configuration.**

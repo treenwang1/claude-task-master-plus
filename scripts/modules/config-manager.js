@@ -68,7 +68,7 @@ const DEFAULTS = {
 		debug: false,
 		defaultSubtasks: 5,
 		defaultPriority: 'high',
-		currentGroup: 'default',
+		workingTaskGroup: 'default',
 		projectName: 'Task Master',
 		defaultFlow: [
 			{"status": "pending", "executor": "agent"}, 

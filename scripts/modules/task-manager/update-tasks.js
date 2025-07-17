@@ -23,23 +23,10 @@ import { getDebugFlag } from '../config-manager.js';
 import generateTaskFiles from './generate-task-files.js';
 import { generateTextService } from '../ai-services-unified.js';
 import { getModelConfiguration } from './models.js';
-
-// Zod schema for validating the structure of tasks AFTER parsing
-const updatedTaskSchema = z
-	.object({
-		id: z.number().int(),
-		title: z.string(),
-		description: z.string(),
-		status: z.string(),
-		dependencies: z.array(z.union([z.number().int(), z.string()])),
-		priority: z.string().optional(),
-		details: z.string().optional(),
-		testStrategy: z.string().optional(),
-		executor: z.enum(['agent', 'human']).optional().default('agent'),
-		subtasks: z.array(z.any()).optional() // Keep subtasks flexible for now
-	})
-	.strip(); // Allow potential extra fields during parsing if needed, then validate structure
-const updatedTaskArraySchema = z.array(updatedTaskSchema);
+import { 
+	updatedTaskSchema, 
+	updatedTaskArraySchema 
+} from '../../../src/schemas/task-schemas.js';
 
 /**
  * Parses an array of task objects from AI's text response.

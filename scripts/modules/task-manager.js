@@ -15,7 +15,7 @@ import expandTask from './task-manager/expand-task.js';
 import expandAllTasks from './task-manager/expand-all-tasks.js';
 import clearSubtasks from './task-manager/clear-subtasks.js';
 import addTask from './task-manager/add-task.js';
-import analyzeTaskComplexity from './task-manager/analyze-task-complexity.js';
+
 import findNextTask, { findNextTaskFromRootPath } from './task-manager/find-next-task.js';
 import addSubtask from './task-manager/add-subtask.js';
 import removeSubtask from './task-manager/remove-subtask.js';
@@ -25,7 +25,7 @@ import taskExists from './task-manager/task-exists.js';
 import isTaskDependentOn from './task-manager/is-task-dependent.js';
 import moveTask from './task-manager/move-task.js';
 import { migrateProject } from './task-manager/migrate.js';
-import { readComplexityReport, regenerateSequentialTaskIds, rewriteSequentialTaskIds } from './utils.js';
+import { regenerateSequentialTaskIds, rewriteSequentialTaskIds } from './utils.js';
 import { addDependency } from './dependency-manager.js';
 // Export task manager functions
 export {
@@ -47,13 +47,13 @@ export {
 	removeSubtask,
 	findNextTask,
 	findNextTaskFromRootPath,
-	analyzeTaskComplexity,
+
 	removeTask,
 	findTaskById,
 	taskExists,
 	isTaskDependentOn,
 	moveTask,
-	readComplexityReport,
+
 	migrateProject,
 	addDependency,
 	regenerateSequentialTaskIds,

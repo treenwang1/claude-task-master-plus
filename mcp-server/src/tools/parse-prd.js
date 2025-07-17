@@ -11,6 +11,7 @@ import {
 } from './utils.js';
 import { parsePRDDirect } from '../core/task-master-core.js';
 import {PRD_FILE, TASKMASTER_DOCS_DIR, TASKMASTER_TASKS_FILE} from '../../../src/constants/paths.js';
+import { taskArraySchema } from '../../../src/schemas/task-schemas.js';
 
 /**
  * Register the parse_prd tool
@@ -56,65 +57,7 @@ export function registerParsePRDTool(server) {
 				.boolean()
 				.optional()
 				.describe('Append generated tasks to existing file.'),
-			tasks: z
-				.array(z.object({
-					id: z.number().int().positive(),
-					title: z.string().min(1),
-					description: z.string().min(1),
-					details: z.string().optional().default(''),
-					testStrategy: z.string().optional().default(''),
-					priority: z.enum(['high', 'medium', 'low']).default('medium'),
-					dependencies: z.array(z.number().int().positive()).optional().default([]),
-					status: z.string().optional().default('pending'),
-					executor: z.enum(['agent', 'human']).optional().default('agent'),
-					verifications: z
-						.array(z.object({
-							description: z.string().describe('Description of what to verify'),
-							passed: z.boolean().describe('Whether this verification has passed')
-						}))
-						.optional()
-						.default([])
-						.describe('Array of verification steps to check if the task is completed correctly'),
-					results: z
-						.string()
-						.optional()
-						.default('')
-						.describe('Results or outcomes of the task execution'),
-					metadata: z
-						.object({
-							fields: z
-								.array(z.object({
-									key: z.string().describe('Field key'),
-									label: z.string().describe('Field label'),
-									type: z.string().describe('Field input type'),
-									description: z.string().describe('Field description'),
-									required: z.boolean().describe('Whether field is required'),
-									enum: z.array(z.string()).optional().describe('Enum values for select fields')
-								}))
-								.optional()
-								.describe('Custom fields for this task'),
-							mcp: z
-								.array(z.string())
-								.optional()
-								.describe('MCP servers required for this task'),
-							linksTo: z
-								.object({
-									taskGroup: z.string().describe('Task group this task links to')
-								})
-								.optional()
-								.describe('Task group linkage'),
-							linkedBy: z
-								.object({
-									taskGroup: z.string().describe('Task group linked by this task')
-								})
-								.optional()
-								.describe('Task group linked by this task')
-						})
-						.optional()
-						.default({})
-						.describe('Metadata for task configuration and relationships')
-				}))
-				.optional()
+			tasks: taskArraySchema
 				.describe('Pre-analyzed tasks array following the current tasks.json schema. If provided, skips third-party LLM generation and uses these tasks directly after analyzing the current project.')
 		}),
 		execute: withNormalizedProjectRoot(async (args, { log, session }) => {

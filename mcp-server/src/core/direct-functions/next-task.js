@@ -6,7 +6,7 @@
 import { findNextTask } from '../../../../scripts/modules/task-manager.js';
 import {
 	readJSON,
-	readComplexityReport
+
 } from '../../../../scripts/modules/utils.js';
 import {
 	enableSilentMode,
@@ -58,7 +58,7 @@ export async function nextTaskDirect(args, log) {
 			}
 
 			// Read the complexity report
-			const complexityReport = readComplexityReport(reportPath);
+			const complexityReport = null; // Complexity analysis removed
 
 			// Find the next task
 			const nextTask = findNextTask(data.tasks, complexityReport);

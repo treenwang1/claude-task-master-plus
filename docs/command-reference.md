@@ -124,6 +124,9 @@ task-master expand --id=<id> --research
 
 # Research-backed generation for all tasks
 task-master expand --all --research
+
+# Use predefined subtasks (bypasses AI generation)
+task-master expand --id=<id> --subtasks='[{"id":1,"title":"Setup","description":"Initial setup","dependencies":[],"details":"Create project structure","status":"pending"}]'
 ```
 
 ## Clear Subtasks
@@ -137,38 +140,6 @@ task-master clear-subtasks --id=1,2,3
 
 # Clear subtasks from all tasks
 task-master clear-subtasks --all
-```
-
-## Analyze Task Complexity
-
-```bash
-# Analyze complexity of all tasks
-task-master analyze-complexity
-
-# Save report to a custom location
-task-master analyze-complexity --output=my-report.json
-
-# Use a specific LLM model
-task-master analyze-complexity --model=claude-3-opus-20240229
-
-# Set a custom complexity threshold (1-10)
-task-master analyze-complexity --threshold=6
-
-# Use an alternative tasks file
-task-master analyze-complexity --file=custom-tasks.json
-
-# Use Perplexity AI for research-backed complexity analysis
-task-master analyze-complexity --research
-```
-
-## View Complexity Report
-
-```bash
-# Display the task complexity analysis report
-task-master complexity-report
-
-# View a report at a custom location
-task-master complexity-report --file=my-report.json
 ```
 
 ## Managing Task Dependencies

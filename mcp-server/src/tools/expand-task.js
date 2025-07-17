@@ -11,6 +11,7 @@ import {
 } from './utils.js';
 import { expandTaskDirect } from '../core/task-master-core.js';
 import { findTasksPath } from '../core/utils/path-utils.js';
+import { subtaskSchema } from '../../../src/schemas/task-schemas.js';
 
 /**
  * Register the expand-task tool with the MCP server
@@ -23,15 +24,15 @@ export function registerExpandTaskTool(server) {
 		parameters: z.object({
 			id: z.string().describe('ID of task to expand'),
 			num: z.string().optional().describe('Number of subtasks to generate'),
-			research: z
-				.boolean()
-				.optional()
-				.default(false)
-				.describe('Use research role for generation'),
-			prompt: z
-				.string()
-				.optional()
-				.describe('Additional context for subtask generation'),
+			// research: z
+			// 	.boolean()
+			// 	.optional()
+			// 	.default(false)
+			// 	.describe('Use research role for generation'),
+			// prompt: z
+			// 	.string()
+			// 	.optional()
+			// 	.describe('Additional context for subtask generation'),
 			file: z
 				.string()
 				.optional()
@@ -44,8 +45,11 @@ export function registerExpandTaskTool(server) {
 			force: z
 				.boolean()
 				.optional()
-				.default(false)
-				.describe('Force expansion even if subtasks exist')
+				.default(true)
+				.describe('Force expansion even if subtasks exist'),
+			subtasks: z
+				.array(subtaskSchema)
+				.describe('Array of subtask objects to use directly')
 		}),
 		execute: withNormalizedProjectRoot(async (args, { log, session }) => {
 			try {
@@ -73,6 +77,7 @@ export function registerExpandTaskTool(server) {
 						research: args.research,
 						prompt: args.prompt,
 						force: args.force,
+						subtasks: args.subtasks,
 						projectRoot: args.projectRoot
 					},
 					log,

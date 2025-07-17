@@ -19,13 +19,13 @@ import { expandTaskDirect } from './direct-functions/expand-task.js';
 import { addTaskDirect } from './direct-functions/add-task.js';
 import { addSubtaskDirect } from './direct-functions/add-subtask.js';
 import { removeSubtaskDirect } from './direct-functions/remove-subtask.js';
-import { analyzeTaskComplexityDirect } from './direct-functions/analyze-task-complexity.js';
+
 import { clearSubtasksDirect } from './direct-functions/clear-subtasks.js';
 import { expandAllTasksDirect } from './direct-functions/expand-all-tasks.js';
 import { removeDependencyDirect } from './direct-functions/remove-dependency.js';
 import { validateDependenciesDirect } from './direct-functions/validate-dependencies.js';
 import { fixDependenciesDirect } from './direct-functions/fix-dependencies.js';
-import { complexityReportDirect } from './direct-functions/complexity-report.js';
+
 import { addDependencyDirect } from './direct-functions/add-dependency.js';
 import { removeTaskDirect } from './direct-functions/remove-task.js';
 import { initializeProjectDirect } from './direct-functions/initialize-project.js';
@@ -51,13 +51,13 @@ export const directFunctions = new Map([
 	['addTaskDirect', addTaskDirect],
 	['addSubtaskDirect', addSubtaskDirect],
 	['removeSubtaskDirect', removeSubtaskDirect],
-	['analyzeTaskComplexityDirect', analyzeTaskComplexityDirect],
+	
 	['clearSubtasksDirect', clearSubtasksDirect],
 	['expandAllTasksDirect', expandAllTasksDirect],
 	['removeDependencyDirect', removeDependencyDirect],
 	['validateDependenciesDirect', validateDependenciesDirect],
 	['fixDependenciesDirect', fixDependenciesDirect],
-	['complexityReportDirect', complexityReportDirect],
+	
 	['addDependencyDirect', addDependencyDirect],
 	['removeTaskDirect', removeTaskDirect],
 	['initializeProjectDirect', initializeProjectDirect],
@@ -81,13 +81,13 @@ export {
 	addTaskDirect,
 	addSubtaskDirect,
 	removeSubtaskDirect,
-	analyzeTaskComplexityDirect,
+	
 	clearSubtasksDirect,
 	expandAllTasksDirect,
 	removeDependencyDirect,
 	validateDependenciesDirect,
 	fixDependenciesDirect,
-	complexityReportDirect,
+	
 	addDependencyDirect,
 	removeTaskDirect,
 	initializeProjectDirect,

@@ -31,6 +31,7 @@ export async function parsePRDDirect(args, log, context = {}) {
 		input: inputArg,
 		output: outputArg,
 		numTasks: numTasksArg,
+		tasks: tasksArg,
 		force,
 		append,
 		research,
