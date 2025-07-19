@@ -19,6 +19,7 @@ import { expandTaskDirect } from './direct-functions/expand-task.js';
 import { addTaskDirect } from './direct-functions/add-task.js';
 import { addSubtaskDirect } from './direct-functions/add-subtask.js';
 import { removeSubtaskDirect } from './direct-functions/remove-subtask.js';
+import { addResultDirect } from './direct-functions/add-result.js';
 
 import { clearSubtasksDirect } from './direct-functions/clear-subtasks.js';
 import { expandAllTasksDirect } from './direct-functions/expand-all-tasks.js';
@@ -51,6 +52,7 @@ export const directFunctions = new Map([
 	['addTaskDirect', addTaskDirect],
 	['addSubtaskDirect', addSubtaskDirect],
 	['removeSubtaskDirect', removeSubtaskDirect],
+	['addResultDirect', addResultDirect],
 	
 	['clearSubtasksDirect', clearSubtasksDirect],
 	['expandAllTasksDirect', expandAllTasksDirect],
@@ -81,6 +83,7 @@ export {
 	addTaskDirect,
 	addSubtaskDirect,
 	removeSubtaskDirect,
+	addResultDirect,
 	
 	clearSubtasksDirect,
 	expandAllTasksDirect,

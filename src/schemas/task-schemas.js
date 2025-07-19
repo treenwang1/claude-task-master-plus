@@ -11,6 +11,16 @@ export const verificationSchema = z.object({
     passed: z.boolean().describe('Whether this verification has passed')
 });
 
+// Result entry schema for tracking task/subtask execution results
+export const resultSchema = z.object({
+    action: z.string().describe('The action that was performed'),
+    updateTime: z.string().datetime().describe('ISO datetime string when this result was recorded'),
+    result: z.string().describe('The outcome or result of the action')
+});
+
+// Results schema for tracking task/subtask execution results
+export const resultsSchema = z.array(resultSchema).describe('Array of result entries tracking the execution history of the task/subtask');
+
 // Metadata field schema used in both tasks and subtasks
 export const metadataFieldSchema = z.object({
     key: z.string().describe('Field key'),
@@ -18,7 +28,8 @@ export const metadataFieldSchema = z.object({
     type: z.string().describe('Field input type'),
     description: z.string().describe('Field description'),
     required: z.boolean().describe('Whether field is required'),
-    enum: z.array(z.string()).optional().describe('Enum values for select fields')
+    enum: z.array(z.string()).optional().describe('Enum values for select fields'),
+    value: z.string().optional().describe('The value for the field')
 });
 
 // Task group linkage schema
@@ -79,10 +90,8 @@ export const subtaskSchema = z
             .array(verificationSchema)
             .optional()
             .describe('Array of verification steps to check if the subtask is completed correctly'),
-        results: z
-            .string()
-            .optional()
-            .describe('Results or outcomes of the subtask execution'),
+        results: resultsSchema
+            .optional(),
         metadata: metadataSchema
             .optional()
             .describe('Metadata for subtask configuration and relationships')
@@ -113,11 +122,9 @@ export const taskSchema = z.object({
         .optional()
         .default([])
         .describe('Array of verification steps to check if the task is completed correctly'),
-    results: z
-        .string()
+    results: resultsSchema
         .optional()
-        .default('')
-        .describe('Results or outcomes of the task execution'),
+        .describe('Array of result entries tracking the execution history of the task'),
     metadata: metadataSchema
         .optional()
         .default({})
@@ -160,10 +167,8 @@ export const aiTaskDataSchema = z.object({
         .array(verificationSchema)
         .optional()
         .describe('Array of verification steps to check if the task is completed correctly'),
-    results: z
-        .string()
-        .optional()
-        .describe('Results or outcomes of the task execution'),
+    results: resultsSchema
+        .optional(),
     metadata: metadataSchema
         .optional()
         .describe('Metadata for task configuration and relationships')

@@ -45,12 +45,12 @@ export function registerSetTaskStatusTool(server) {
 					"Optionally set the executor for the task (agent or human). Useful when setting status to 'review'."
 				),
 			file: z.string().optional().describe('Absolute path to the tasks file'),
-			complexityReport: z
-				.string()
-				.optional()
-				.describe(
-					'Path to the complexity report file (relative to project root or absolute)'
-				),
+			// complexityReport: z
+			// 	.string()
+			// 	.optional()
+			// 	.describe(
+			// 		'Path to the complexity report file (relative to project root or absolute)'
+			// 	),
 			projectRoot: z
 				.string()
 				.describe('The directory of the project. Must be an absolute path.')

@@ -17,6 +17,7 @@ import { registerExpandTaskTool } from './expand-task.js';
 import { registerAddTaskTool } from './add-task.js';
 import { registerAddSubtaskTool } from './add-subtask.js';
 import { registerRemoveSubtaskTool } from './remove-subtask.js';
+import { registerAddResultTool } from './add-result.js';
 
 import { registerClearSubtasksTool } from './clear-subtasks.js';
 import { registerExpandAllTool } from './expand-all.js';
@@ -48,7 +49,6 @@ export function registerTaskMasterTools(server) {
 		registerShowTaskTool(server);
 		registerNextTaskTool(server);
 
-
 		// Group 3: Task Status & Management
 		registerSetTaskStatusTool(server);
 		registerGenerateTool(server);
@@ -59,6 +59,7 @@ export function registerTaskMasterTools(server) {
 		registerUpdateTool(server);
 		registerUpdateTaskTool(server);
 		registerUpdateSubtaskTool(server);
+		registerAddResultTool(server);
 		registerRemoveTaskTool(server);
 		registerRemoveSubtaskTool(server);
 		registerClearSubtasksTool(server);

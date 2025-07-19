@@ -11,6 +11,7 @@ import {
 } from './utils.js';
 import { updateTaskByIdDirect } from '../core/task-master-core.js';
 import { findTasksPath } from '../core/utils/path-utils.js';
+import { metadataSchema, subtaskSchema, verificationSchema } from '../../../src/schemas/task-schemas.js';
 
 /**
  * Register the update-task tool with the MCP server
@@ -23,21 +24,28 @@ export function registerUpdateTaskTool(server) {
 			'Updates a single task by ID with new information or context provided in the prompt.',
 		parameters: z.object({
 			id: z
-				.string() // ID can be number or string like "1.2"
+				.number().int() // ID can be number or string like "1"
 				.describe(
-					"ID of the task (e.g., '15') to update. Subtasks are supported using the update-subtask tool."
+					"ID of the task (e.g. '15') to update. Subtasks are supported using the update-subtask tool."
 				),
-			prompt: z
-				.string()
-				.describe('New information or context to incorporate into the task'),
-			research: z
-				.boolean()
-				.optional()
-				.describe('Use Perplexity AI for research-backed updates'),
+			// prompt: z
+			// 	.string()
+			// 	.describe('New information or context to incorporate into the task'),
+			// research: z
+			// 	.boolean()
+			// 	.optional()
+			// 	.describe('Use Perplexity AI for research-backed updates'),
 			file: z.string().optional().describe('Absolute path to the tasks file'),
 			projectRoot: z
 				.string()
-				.describe('The directory of the project. Must be an absolute path.')
+				.describe('The directory of the project. Must be an absolute path.'),
+			subtasks: z.array(subtaskSchema).optional().describe('Subtasks to update'),
+			verifications: z.array(verificationSchema).optional().describe('Verifications to update'),
+			metadata: z.array(metadataSchema).optional().describe('Metadata to update'),
+			results: z
+				.string()
+				.optional()
+				.describe('Results or outcomes of the task execution'),
 		}),
 		execute: withNormalizedProjectRoot(async (args, { log, session }) => {
 			const toolName = 'update_task';
