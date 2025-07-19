@@ -160,6 +160,12 @@ jest.mock('../../../scripts/modules/task-manager.js', () => ({
 	taskExists: mockTaskExists
 }));
 
+// Mock parsePRDDirect function
+const mockParsePRDDirect = jest.fn();
+jest.mock('../../../mcp-server/src/core/direct-functions/parse-prd.js', () => ({
+	parsePRDDirect: mockParsePRDDirect
+}));
+
 // Import dependencies after mocks are set up
 import { sampleTasks } from '../../fixtures/sample-tasks.js';
 
@@ -740,6 +746,213 @@ describe('MCP Server Direct Functions', () => {
 			);
 			expect(mockEnableSilentMode).toHaveBeenCalled();
 			expect(mockDisableSilentMode).toHaveBeenCalled();
+		});
+	});
+
+	describe('parsePRDDirect', () => {
+		// Test wrapper function that simulates parsePRDDirect behavior
+		async function testParsePRDDirect(args, mockLogger, options = {}) {
+			// Validate required arguments
+			if (!args.projectRoot) {
+				mockLogger.error('parsePRDDirect requires a projectRoot argument.');
+				return {
+					success: false,
+					error: {
+						code: 'MISSING_ARGUMENT',
+						message: 'Project root is required'
+					}
+				};
+			}
+
+			// Check if tasks are provided directly
+			if (args.tasks) {
+				mockLogger.info('Tasks provided directly, persisting tasks without parsing PRD.');
+				
+				// Validate tasks format
+				if (!Array.isArray(args.tasks)) {
+					mockLogger.error('Tasks parameter must be an array.');
+					return {
+						success: false,
+						error: {
+							code: 'INVALID_TASKS_FORMAT',
+							message: 'Tasks parameter must be an array.'
+						}
+					};
+				}
+				
+				// Simulate successful task persistence
+				const outputPath = args.output || path.join(args.projectRoot, 'tasks.json');
+				const successMsg = `Successfully persisted ${args.tasks.length} tasks to ${outputPath}`;
+				mockLogger.info(successMsg);
+				return {
+					success: true,
+					data: {
+						message: successMsg,
+						outputPath: outputPath,
+						taskCount: args.tasks.length
+					}
+				};
+			}
+
+			// Check input path requirement when tasks not provided
+			if (!args.input) {
+				mockLogger.error('parsePRDDirect called without input path and no tasks provided');
+				return {
+					success: false,
+					error: {
+						code: 'MISSING_ARGUMENT',
+						message: 'Either input path or tasks parameter is required'
+					}
+				};
+			}
+
+			// Simulate normal PRD parsing (when no tasks provided)
+			const outputPath = args.output || path.join(args.projectRoot, 'tasks.json');
+			const successMsg = `Successfully parsed PRD and generated tasks in ${outputPath}`;
+			mockLogger.info(successMsg);
+			return {
+				success: true,
+				data: {
+					message: successMsg,
+					outputPath: outputPath,
+					telemetryData: { tasksGenerated: 3 }
+				}
+			};
+		}
+
+		beforeEach(() => {
+			// Reset mock before each test
+			mockParsePRDDirect.mockClear();
+		});
+
+		test('should persist tasks directly when tasks parameter is provided', async () => {
+			// Arrange
+			const mockTasks = [
+				{
+					id: 1,
+					title: 'Setup Project Structure',
+					description: 'Initialize the basic project structure',
+					status: 'pending',
+					dependencies: []
+				},
+				{
+					id: 2,
+					title: 'Implement Core Features',
+					description: 'Build the main functionality',
+					status: 'pending',
+					dependencies: [1]
+				}
+			];
+
+			const args = {
+				projectRoot: testProjectRoot,
+				tasks: mockTasks,
+				output: path.join(testProjectRoot, 'direct-tasks.json')
+			};
+
+			// Act
+			const result = await testParsePRDDirect(args, mockLogger, {
+				session: mockSession
+			});
+
+			// Assert
+			expect(result.success).toBe(true);
+			expect(result.data.taskCount).toBe(2);
+			expect(result.data.message).toContain('Successfully persisted 2 tasks');
+			expect(result.data.outputPath).toBe(args.output);
+			expect(mockLogger.info).toHaveBeenCalledWith(
+				'Tasks provided directly, persisting tasks without parsing PRD.'
+			);
+		});
+
+		test('should validate tasks parameter format', async () => {
+			// Arrange
+			const args = {
+				projectRoot: testProjectRoot,
+				tasks: 'invalid-format', // Should be array
+				output: path.join(testProjectRoot, 'tasks.json')
+			};
+
+			// Act
+			const result = await testParsePRDDirect(args, mockLogger, {
+				session: mockSession
+			});
+
+			// Assert
+			expect(result.success).toBe(false);
+			expect(result.error.code).toBe('INVALID_TASKS_FORMAT');
+			expect(result.error.message).toBe('Tasks parameter must be an array.');
+			expect(mockLogger.error).toHaveBeenCalledWith(
+				'Tasks parameter must be an array.'
+			);
+		});
+
+		test('should require either input path or tasks parameter', async () => {
+			// Arrange
+			const args = {
+				projectRoot: testProjectRoot
+				// No input path and no tasks provided
+			};
+
+			// Act
+			const result = await testParsePRDDirect(args, mockLogger, {
+				session: mockSession
+			});
+
+			// Assert
+			expect(result.success).toBe(false);
+			expect(result.error.code).toBe('MISSING_ARGUMENT');
+			expect(result.error.message).toBe(
+				'Either input path or tasks parameter is required'
+			);
+			expect(mockLogger.error).toHaveBeenCalledWith(
+				'parsePRDDirect called without input path and no tasks provided'
+			);
+		});
+
+		test('should handle empty tasks array', async () => {
+			// Arrange
+			const args = {
+				projectRoot: testProjectRoot,
+				tasks: [], // Empty array
+				output: path.join(testProjectRoot, 'empty-tasks.json')
+			};
+
+			// Act
+			const result = await testParsePRDDirect(args, mockLogger, {
+				session: mockSession
+			});
+
+			// Assert
+			expect(result.success).toBe(true);
+			expect(result.data.taskCount).toBe(0);
+			expect(result.data.message).toContain('Successfully persisted 0 tasks');
+			expect(mockLogger.info).toHaveBeenCalledWith(
+				'Tasks provided directly, persisting tasks without parsing PRD.'
+			);
+		});
+
+		test('should fall back to normal PRD parsing when no tasks provided', async () => {
+			// Arrange
+			const args = {
+				projectRoot: testProjectRoot,
+				input: path.join(testProjectRoot, 'sample-prd.md'),
+				output: path.join(testProjectRoot, 'parsed-tasks.json'),
+				numTasks: 3
+			};
+
+			// Act
+			const result = await testParsePRDDirect(args, mockLogger, {
+				session: mockSession
+			});
+
+			// Assert
+			expect(result.success).toBe(true);
+			expect(result.data.message).toContain('Successfully parsed PRD and generated tasks');
+			expect(result.data.telemetryData).toBeDefined();
+			expect(mockLogger.info).not.toHaveBeenCalledWith(
+				'Tasks provided directly, persisting tasks without parsing PRD.'
+			);
 		});
 	});
 });

@@ -53,7 +53,7 @@ export async function parsePRDDirect(args, log, context = {}) {
 		};
 	}
 
-	// Resolve input path using path utilities
+	// Resolve input path using path utilities (only required if tasks are not provided directly)
 	let inputPath;
 	if (inputArg) {
 		try {
@@ -65,11 +65,12 @@ export async function parsePRDDirect(args, log, context = {}) {
 				error: { code: 'FILE_NOT_FOUND', message: error.message }
 			};
 		}
-	} else {
-		logWrapper.error('parsePRDDirect called without input path');
+	} else if (!tasksArg) {
+		// Input path is only required if tasks are not provided directly
+		logWrapper.error('parsePRDDirect called without input path and no tasks provided');
 		return {
 			success: false,
-			error: { code: 'MISSING_ARGUMENT', message: 'Input path is required' }
+			error: { code: 'MISSING_ARGUMENT', message: 'Either input path or tasks parameter is required' }
 		};
 	}
 
@@ -81,8 +82,8 @@ export async function parsePRDDirect(args, log, context = {}) {
 		: resolveProjectPath(TASKMASTER_TASKS_FILE, args) ||
 			path.resolve(projectRoot, TASKMASTER_TASKS_FILE);
 
-	// Check if input file exists
-	if (!fs.existsSync(inputPath)) {
+	// Check if input file exists (only when inputPath is defined)
+	if (inputPath && !fs.existsSync(inputPath)) {
 		const errorMsg = `Input PRD file not found at resolved path: ${inputPath}`;
 		logWrapper.error(errorMsg);
 		return {
@@ -144,6 +145,58 @@ export async function parsePRDDirect(args, log, context = {}) {
 	}
 
 	try {
+		// Check if tasks are provided directly
+		if (tasksArg) {
+			logWrapper.info('Tasks provided directly, persisting tasks without parsing PRD.');
+			
+			// Validate tasks format
+			if (!Array.isArray(tasksArg)) {
+				logWrapper.error('Tasks parameter must be an array.');
+				return {
+					success: false,
+					error: {
+						code: 'INVALID_TASKS_FORMAT',
+						message: 'Tasks parameter must be an array.'
+					}
+				};
+			}
+			
+			// Persist tasks directly to output file
+			try {
+				const tasksData = {
+					tasks: tasksArg,
+					metadata: {
+						createdAt: new Date().toISOString(),
+						source: 'direct-tasks',
+						projectRoot
+					}
+				};
+				
+				fs.writeFileSync(outputPath, JSON.stringify(tasksData, null, 2), 'utf8');
+				
+				const successMsg = `Successfully persisted ${tasksArg.length} tasks to ${outputPath}`;
+				logWrapper.success(successMsg);
+				return {
+					success: true,
+					data: {
+						message: successMsg,
+						outputPath: outputPath,
+						taskCount: tasksArg.length
+					}
+				};
+			} catch (writeError) {
+				const errorMsg = `Failed to write tasks to ${outputPath}: ${writeError.message}`;
+				logWrapper.error(errorMsg);
+				return {
+					success: false,
+					error: {
+						code: 'WRITE_TASKS_FAILED',
+						message: errorMsg
+					}
+				};
+			}
+		}
+		
 		// Call the core parsePRD function
 		const result = await parsePRD(
 			inputPath,
