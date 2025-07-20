@@ -198,10 +198,12 @@ async function updateTaskNormalAttributeById(tasksPath, taskId, key, value) {
 		(task) => task.id === taskId
 	);
 
-	tasksToUpdate[key] = value;
-	writeJSON(tasksPath, data);
+	if(tasksToUpdate){
+		tasksToUpdate[key] = value;
+		writeJSON(tasksPath, data);
+	}
 
-	return updatedTasks;
+	return tasksToUpdate;
 }
 
 /**
@@ -217,10 +219,39 @@ async function updateTaskNormalAttributesById(tasksPath, taskId, attributes) {
 		(task) => task.id === taskId
 	);
 	
-	// merge attributes into tasksToUpdate
-	Object.assign(tasksToUpdate, attributes);
+	if(tasksToUpdate){
+		// merge attributes into tasksToUpdate
+		Object.assign(tasksToUpdate, attributes);
 
-	writeJSON(tasksPath, data);
+		writeJSON(tasksPath, data);
+	}
+	return tasksToUpdate;
+}
+
+/**
+ * Update metadata field value single task by ID using the unified AI service.
+ * @param {string} tasksPath - Path to the tasks.json file
+ * @param {number} taskId - Task ID to update
+ * @param {string} key - Key to update
+ * @param {string} value - Value to set
+ * @returns {Promise<Object>} - Updated task data
+ */
+async function updateTaskMetadataFieldValueById(tasksPath, taskId, fieldKey, fieldValue) {
+	const data = readJSON(tasksPath);
+	const tasksToUpdate = data.tasks.find(
+		(task) => task.id === taskId
+	);
+
+	if (tasksToUpdate && tasksToUpdate.metadata && tasksToUpdate.metadata.fields) {
+
+		const field = tasksToUpdate.metadata.fields.find(field => field.key === fieldKey);
+		if (field) {
+			field.value = fieldValue;
+		}
+		writeJSON(tasksPath, data);
+	}
+
+	return tasksToUpdate;
 }
 
 /**
@@ -508,3 +539,4 @@ The changes described in the prompt should be thoughtfully applied to make the t
 }
 
 export default updateTaskById;
+export { updateTaskNormalAttributeById, updateTaskNormalAttributesById, updateTaskMetadataFieldValueById };

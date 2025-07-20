@@ -478,5 +478,35 @@ async function updateSubtaskNormalAttributeById(tasksPath, subtaskId, key, value
 	return await updateSubtaskNormalAttributesById(tasksPath, subtaskId, { [key]: value });
 }
 
+/**
+ * Update a subtask's metadata field value by ID
+ * @param {string} tasksPath - Path to the tasks.json file
+ * @param {string} subtaskId - ID of the subtask to update in format "parentId.subtaskId"
+ * @param {string} fieldKey - Metadata field key to update
+ * @param {any} fieldValue - New value for the metadata field
+ * @returns {Promise<Object>} - Updated subtask data
+ */
+async function updateSubtaskMetadataFieldValueById(tasksPath, subtaskId, fieldKey, fieldValue) {
+	if (!fieldKey || typeof fieldKey !== 'string') {
+		throw new Error('Metadata field key must be a non-empty string');
+	}
+
+	const { data, parentTask, subtaskIndex } = validateAndFindSubtask(tasksPath, subtaskId);
+
+	if(!parentTask.subtasks[subtaskIndex].metadata || !parentTask.subtasks[subtaskIndex].metadata.fields) {
+		throw new Error(`Subtask ${subtaskId} has no metadata field`);
+	}
+	// Update metadata field value
+	const field = parentTask.subtasks[subtaskIndex].metadata.fields.find(field => field.key === fieldKey);
+	if (!field) {
+		throw new Error(`Subtask ${subtaskId} has no metadata field ${fieldKey}`);
+	}
+	field.value = fieldValue;
+
+	writeJSON(tasksPath, data);
+
+	return parentTask.subtasks[subtaskIndex];
+}
+
 export default updateSubtaskById;
-export { updateSubtaskNormalAttributeById, updateSubtaskNormalAttributesById };
+export { updateSubtaskNormalAttributeById, updateSubtaskNormalAttributesById, updateSubtaskMetadataFieldValueById };
