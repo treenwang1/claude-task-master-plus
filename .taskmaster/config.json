@@ -3,7 +3,7 @@
     "main": {
       "provider": "openrouter",
       "modelId": "deepseek/deepseek-chat-v3-0324:free",
-      "maxTokens": 120000,
+      "maxTokens": 8700,
       "temperature": 0.2
     },
     "research": {
@@ -24,7 +24,7 @@
     "debug": false,
     "defaultSubtasks": 3,
     "defaultPriority": "medium",
-    "workingTaskGroup": "storybook",
+    "workingTaskGroup": "jira-story",
     "projectName": "Taskmaster",
     "defaultFlow": [
       {
@@ -46,8 +46,65 @@
     ],
     "ollamaBaseURL": "http://localhost:11434/api",
     "bedrockBaseURL": "https://bedrock.us-east-1.amazonaws.com",
-    "currentGroup": "default",
     "azureOpenaiBaseURL": "https://your-endpoint.openai.azure.com/",
     "userId": "1234567890"
-  }
+  },
+  "promoteDefinitions": [
+    {
+      "key": "improve-cursor-rules",
+      "label": "Improve Process and Persist to Cursor Rules",
+      "description": "When you got an unexpected behavior when processing a task, you want to fix it and persist into Cursor rules.",
+      "promoteFields": [
+        {
+          "key": "currentBehavior",
+          "label": "Current Behavior",
+          "type": "textarea",
+          "description": "The problem you met when processing a task",
+          "enum": [],
+          "value": ""
+        },
+        {
+          "key": "newBehavior",
+          "label": "New Behavior",
+          "type": "textarea",
+          "description": "The new behavior you want to fix and persisted into Cursor rules",
+          "enum": [],
+          "value": ""
+        }
+      ],
+      "promote": "Find out the root cause of current behavior:\n```\n${currentBehavior}\n```\nThe new behavior should be as below:\n```\n${newBehavior}\n```\nUpdate the Cursor rules to make sure you will act the current behavior in future."
+    },
+    {
+      "key": "parsePrd",
+      "label": "Parse PRD and Generate Tasks",
+      "description": "Parse PRD file and generate tasks into 'tasks.json'. \nNote: be careful that the existing tasks will be overridden.",
+      "promoteFields": [
+        {
+          "key": "prdPath",
+          "label": "PRD File Path",
+          "type": "input",
+          "description": "The path of PRD file, the normal value is `.taskmaster/${taskGroup}/docs/prd.md`",
+          "enum": [],
+          "value": ".taskmaster/${taskGroup}/docs/prd.md"
+        },
+        {
+          "key": "taskPath",
+          "label": "Task File Path",
+          "type": "input",
+          "description": "The path of tasks.json file, the normal value is `.taskmaster/${taskGroup}/tasks/tasks.json`",
+          "enum": [],
+          "value": ".taskmaster/${taskGroup}/tasks/tasks.json"
+        },
+        {
+          "key": "taskGroup",
+          "label": "Task Group",
+          "type": "input",
+          "description": "The task group you are working on",
+          "enum": [],
+          "value": ""
+        }
+      ],
+      "promote": "Force to parse '${prdPath}' to '${taskPath}'\n- consider simple verfications like \"check if file 'x' exists\", \"'x' exists in file 'y'\" or \"script 'x' executed successfully\", etc.\n- Analyze the required fields and update 'tasks[].metadata.fields' if there is."
+    }
+  ]
 }

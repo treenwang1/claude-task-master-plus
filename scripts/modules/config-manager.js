@@ -127,6 +127,7 @@ function _loadAndValidateConfig(explicitRoot = null) {
 
 			// Deep merge parsed config onto defaults
 			config = {
+				...parsedConfig,
 				models: {
 					main: { ...defaults.models.main, ...parsedConfig?.models?.main },
 					research: {
@@ -225,10 +226,7 @@ function _loadAndValidateConfig(explicitRoot = null) {
  */
 function getConfig(explicitRoot = null, forceReload = true) {
 	// Determine if a reload is necessary
-	const needsLoad =
-		!loadedConfig ||
-		forceReload ||
-		(explicitRoot && explicitRoot !== loadedConfigRoot);
+	const needsLoad = true;
 
 	if (needsLoad) {
 		const newConfig = _loadAndValidateConfig(explicitRoot); // _load handles null explicitRoot

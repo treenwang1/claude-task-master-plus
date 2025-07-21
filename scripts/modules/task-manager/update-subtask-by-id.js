@@ -41,7 +41,8 @@ async function updateSubtaskById(
 	prompt,
 	useResearch = false,
 	context = {},
-	outputFormat = context.mcpLog ? 'json' : 'text'
+	outputFormat = context.mcpLog ? 'json' : 'text',
+	directAttributes = {}
 ) {
 	const { session, mcpLog, projectRoot } = {projectRoot: findProjectRoot(path.dirname(tasksPath)), ...context };
 	const logFn = mcpLog || consoleLog;
@@ -72,11 +73,11 @@ async function updateSubtaskById(
 			);
 		}
 
-		if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
-			throw new Error(
-				'Prompt cannot be empty. Please provide context for the subtask update.'
-			);
-		}
+		// if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
+		// 	throw new Error(
+		// 		'Prompt cannot be empty. Please provide context for the subtask update.'
+		// 	);
+		// }
 
 		if (!fs.existsSync(tasksPath)) {
 			throw new Error(`Tasks file not found at path: ${tasksPath}`);
@@ -126,207 +127,213 @@ async function updateSubtaskById(
 
 		const subtask = parentTask.subtasks[subtaskIndex];
 
-		if (outputFormat === 'text') {
-			const table = new Table({
-				head: [
-					chalk.cyan.bold('ID'),
-					chalk.cyan.bold('Title'),
-					chalk.cyan.bold('Status')
-				],
-				colWidths: [10, 55, 10]
-			});
-			table.push([
-				subtaskId,
-				truncate(subtask.title, 52),
-				getStatusWithColor(subtask.status)
-			]);
-			console.log(
-				boxen(chalk.white.bold(`Updating Subtask #${subtaskId}`), {
-					padding: 1,
-					borderColor: 'blue',
-					borderStyle: 'round',
-					margin: { top: 1, bottom: 0 }
-				})
-			);
-			console.log(table.toString());
-			loadingIndicator = startLoadingIndicator(
-				useResearch
-					? 'Updating subtask with research...'
-					: 'Updating subtask...'
-			);
+		if(directAttributes && Object.keys(directAttributes).length > 0){
+			updateSubtaskNormalAttributesById(tasksPath, subtaskId, directAttributes);
 		}
 
-		let generatedContentString = '';
-		let newlyAddedSnippet = '';
-		let aiServiceResponse = null;
-
-		try {
-			const parentContext = {
-				id: parentTask.id,
-				title: parentTask.title
-			};
-			const prevSubtask =
-				subtaskIndex > 0
-					? {
-							id: `${parentTask.id}.${parentTask.subtasks[subtaskIndex - 1].id}`,
-							title: parentTask.subtasks[subtaskIndex - 1].title,
-							status: parentTask.subtasks[subtaskIndex - 1].status
-						}
-					: null;
-			const nextSubtask =
-				subtaskIndex < parentTask.subtasks.length - 1
-					? {
-							id: `${parentTask.id}.${parentTask.subtasks[subtaskIndex + 1].id}`,
-							title: parentTask.subtasks[subtaskIndex + 1].title,
-							status: parentTask.subtasks[subtaskIndex + 1].status
-						}
-					: null;
-
-			const contextString = `
-Parent Task: ${JSON.stringify(parentContext)}
-${prevSubtask ? `Previous Subtask: ${JSON.stringify(prevSubtask)}` : ''}
-${nextSubtask ? `Next Subtask: ${JSON.stringify(nextSubtask)}` : ''}
-Current Subtask Details (for context only):\n${subtask.details || '(No existing details)'}
-`;
-
-			const systemPrompt = `You are an AI assistant helping to update a subtask. You will be provided with the subtask's existing details, context about its parent and sibling tasks, and a user request string.
-
-Your Goal: Based *only* on the user's request and all the provided context (including existing details if relevant to the request), GENERATE the new text content that should be added to the subtask's details.
-Focus *only* on generating the substance of the update.
-
-Output Requirements:
-1. Return *only* the newly generated text content as a plain string. Do NOT return a JSON object or any other structured data.
-2. Your string response should NOT include any of the subtask's original details, unless the user's request explicitly asks to rephrase, summarize, or directly modify existing text.
-3. Do NOT include any timestamps, XML-like tags, markdown, or any other special formatting in your string response.
-4. Ensure the generated text is concise yet complete for the update based on the user request. Avoid conversational fillers or explanations about what you are doing (e.g., do not start with "Okay, here's the update...").`;
-
-			// Pass the existing subtask.details in the user prompt for the AI's context.
-			const userPrompt = `Task Context:\n${contextString}\n\nUser Request: "${prompt}"\n\nBased on the User Request and all the Task Context (including current subtask details provided above), what is the new information or text that should be appended to this subtask's details? Return ONLY this new text as a plain string.`;
-
-			const role = useResearch ? 'research' : 'main';
-			report('info', `Using AI text service with role: ${role}`);
-
-			aiServiceResponse = await generateTextService({
-				prompt: userPrompt,
-				systemPrompt: systemPrompt,
-				role,
-				session,
-				projectRoot,
-				maxRetries: 2,
-				commandName: 'update-subtask',
-				outputType: isMCP ? 'mcp' : 'cli'
-			});
-
-			if (
-				aiServiceResponse &&
-				aiServiceResponse.mainResult &&
-				typeof aiServiceResponse.mainResult === 'string'
-			) {
-				generatedContentString = aiServiceResponse.mainResult;
-			} else {
-				generatedContentString = '';
-				report(
-					'warn',
-					'AI service response did not contain expected text string.'
+		if (prompt){
+			if (outputFormat === 'text') {
+				const table = new Table({
+					head: [
+						chalk.cyan.bold('ID'),
+						chalk.cyan.bold('Title'),
+						chalk.cyan.bold('Status')
+					],
+					colWidths: [10, 55, 10]
+				});
+				table.push([
+					subtaskId,
+					truncate(subtask.title, 52),
+					getStatusWithColor(subtask.status)
+				]);
+				console.log(
+					boxen(chalk.white.bold(`Updating Subtask #${subtaskId}`), {
+						padding: 1,
+						borderColor: 'blue',
+						borderStyle: 'round',
+						margin: { top: 1, bottom: 0 }
+					})
+				);
+				console.log(table.toString());
+				loadingIndicator = startLoadingIndicator(
+					useResearch
+						? 'Updating subtask with research...'
+						: 'Updating subtask...'
 				);
 			}
 
-			if (outputFormat === 'text' && loadingIndicator) {
-				stopLoadingIndicator(loadingIndicator);
-				loadingIndicator = null;
-			}
-		} catch (aiError) {
-			report('error', `AI service call failed: ${aiError.message}`);
-			if (outputFormat === 'text' && loadingIndicator) {
-				stopLoadingIndicator(loadingIndicator);
-				loadingIndicator = null;
-			}
-			throw aiError;
-		}
+			let generatedContentString = '';
+			let newlyAddedSnippet = '';
+			let aiServiceResponse = null;
 
-		if (generatedContentString && generatedContentString.trim()) {
-			// Check if the string is not empty
-			const timestamp = new Date().toISOString();
-			const formattedBlock = `<info added on ${timestamp}>\n${generatedContentString.trim()}\n</info added on ${timestamp}>`;
-			newlyAddedSnippet = formattedBlock; // <--- ADD THIS LINE: Store for display
+			try {
+				const parentContext = {
+					id: parentTask.id,
+					title: parentTask.title
+				};
+				const prevSubtask =
+					subtaskIndex > 0
+						? {
+								id: `${parentTask.id}.${parentTask.subtasks[subtaskIndex - 1].id}`,
+								title: parentTask.subtasks[subtaskIndex - 1].title,
+								status: parentTask.subtasks[subtaskIndex - 1].status
+							}
+						: null;
+				const nextSubtask =
+					subtaskIndex < parentTask.subtasks.length - 1
+						? {
+								id: `${parentTask.id}.${parentTask.subtasks[subtaskIndex + 1].id}`,
+								title: parentTask.subtasks[subtaskIndex + 1].title,
+								status: parentTask.subtasks[subtaskIndex + 1].status
+							}
+						: null;
 
-			subtask.details =
-				(subtask.details ? subtask.details + '\n' : '') + formattedBlock;
-		} else {
-			report(
-				'warn',
-				'AI response was empty or whitespace after trimming. Original details remain unchanged.'
-			);
-			newlyAddedSnippet = 'No new details were added by the AI.';
-		}
+				const contextString = `
+	Parent Task: ${JSON.stringify(parentContext)}
+	${prevSubtask ? `Previous Subtask: ${JSON.stringify(prevSubtask)}` : ''}
+	${nextSubtask ? `Next Subtask: ${JSON.stringify(nextSubtask)}` : ''}
+	Current Subtask Details (for context only):\n${subtask.details || '(No existing details)'}
+	`;
 
-		const updatedSubtask = parentTask.subtasks[subtaskIndex];
+				const systemPrompt = `You are an AI assistant helping to update a subtask. You will be provided with the subtask's existing details, context about its parent and sibling tasks, and a user request string.
 
-		if (outputFormat === 'text' && getDebugFlag(session)) {
-			console.log(
-				'>>> DEBUG: Subtask details AFTER AI update:',
-				updatedSubtask.details
-			);
-		}
+	Your Goal: Based *only* on the user's request and all the provided context (including existing details if relevant to the request), GENERATE the new text content that should be added to the subtask's details.
+	Focus *only* on generating the substance of the update.
 
-		if (updatedSubtask.description) {
-			if (prompt.length < 100) {
-				if (outputFormat === 'text' && getDebugFlag(session)) {
-					console.log(
-						'>>> DEBUG: Subtask description BEFORE append:',
-						updatedSubtask.description
+	Output Requirements:
+	1. Return *only* the newly generated text content as a plain string. Do NOT return a JSON object or any other structured data.
+	2. Your string response should NOT include any of the subtask's original details, unless the user's request explicitly asks to rephrase, summarize, or directly modify existing text.
+	3. Do NOT include any timestamps, XML-like tags, markdown, or any other special formatting in your string response.
+	4. Ensure the generated text is concise yet complete for the update based on the user request. Avoid conversational fillers or explanations about what you are doing (e.g., do not start with "Okay, here's the update...").`;
+
+				// Pass the existing subtask.details in the user prompt for the AI's context.
+				const userPrompt = `Task Context:\n${contextString}\n\nUser Request: "${prompt}"\n\nBased on the User Request and all the Task Context (including current subtask details provided above), what is the new information or text that should be appended to this subtask's details? Return ONLY this new text as a plain string.`;
+
+				const role = useResearch ? 'research' : 'main';
+				report('info', `Using AI text service with role: ${role}`);
+
+				aiServiceResponse = await generateTextService({
+					prompt: userPrompt,
+					systemPrompt: systemPrompt,
+					role,
+					session,
+					projectRoot,
+					maxRetries: 2,
+					commandName: 'update-subtask',
+					outputType: isMCP ? 'mcp' : 'cli'
+				});
+
+				if (
+					aiServiceResponse &&
+					aiServiceResponse.mainResult &&
+					typeof aiServiceResponse.mainResult === 'string'
+				) {
+					generatedContentString = aiServiceResponse.mainResult;
+				} else {
+					generatedContentString = '';
+					report(
+						'warn',
+						'AI service response did not contain expected text string.'
 					);
 				}
-				updatedSubtask.description += ` [Updated: ${new Date().toLocaleDateString()}]`;
-				if (outputFormat === 'text' && getDebugFlag(session)) {
-					console.log(
-						'>>> DEBUG: Subtask description AFTER append:',
-						updatedSubtask.description
-					);
+
+				if (outputFormat === 'text' && loadingIndicator) {
+					stopLoadingIndicator(loadingIndicator);
+					loadingIndicator = null;
+				}
+			} catch (aiError) {
+				report('error', `AI service call failed: ${aiError.message}`);
+				if (outputFormat === 'text' && loadingIndicator) {
+					stopLoadingIndicator(loadingIndicator);
+					loadingIndicator = null;
+				}
+				throw aiError;
+			}
+
+			if (generatedContentString && generatedContentString.trim()) {
+				// Check if the string is not empty
+				const timestamp = new Date().toISOString();
+				const formattedBlock = `<info added on ${timestamp}>\n${generatedContentString.trim()}\n</info added on ${timestamp}>`;
+				newlyAddedSnippet = formattedBlock; // <--- ADD THIS LINE: Store for display
+
+				subtask.details =
+					(subtask.details ? subtask.details + '\n' : '') + formattedBlock;
+			} else {
+				report(
+					'warn',
+					'AI response was empty or whitespace after trimming. Original details remain unchanged.'
+				);
+				newlyAddedSnippet = 'No new details were added by the AI.';
+			}
+
+			const updatedSubtask = parentTask.subtasks[subtaskIndex];
+
+			if (outputFormat === 'text' && getDebugFlag(session)) {
+				console.log(
+					'>>> DEBUG: Subtask details AFTER AI update:',
+					updatedSubtask.details
+				);
+			}
+
+			if (updatedSubtask.description) {
+				if (prompt.length < 100) {
+					if (outputFormat === 'text' && getDebugFlag(session)) {
+						console.log(
+							'>>> DEBUG: Subtask description BEFORE append:',
+							updatedSubtask.description
+						);
+					}
+					updatedSubtask.description += ` [Updated: ${new Date().toLocaleDateString()}]`;
+					if (outputFormat === 'text' && getDebugFlag(session)) {
+						console.log(
+							'>>> DEBUG: Subtask description AFTER append:',
+							updatedSubtask.description
+						);
+					}
 				}
 			}
-		}
 
-		if (outputFormat === 'text' && getDebugFlag(session)) {
-			console.log('>>> DEBUG: About to call writeJSON with updated data...');
-		}
-		writeJSON(tasksPath, data);
-		if (outputFormat === 'text' && getDebugFlag(session)) {
-			console.log('>>> DEBUG: writeJSON call completed.');
-		}
-
-		report('success', `Successfully updated subtask ${subtaskId}`);
-		await generateTaskFiles(tasksPath, path.dirname(tasksPath));
-
-		if (outputFormat === 'text') {
-			if (loadingIndicator) {
-				stopLoadingIndicator(loadingIndicator);
-				loadingIndicator = null;
+			if (outputFormat === 'text' && getDebugFlag(session)) {
+				console.log('>>> DEBUG: About to call writeJSON with updated data...');
 			}
-			console.log(
-				boxen(
-					chalk.green(`Successfully updated subtask #${subtaskId}`) +
-						'\n\n' +
-						chalk.white.bold('Title:') +
-						' ' +
-						updatedSubtask.title +
-						'\n\n' +
-						chalk.white.bold('Newly Added Snippet:') +
-						'\n' +
-						chalk.white(newlyAddedSnippet),
-					{ padding: 1, borderColor: 'green', borderStyle: 'round' }
-				)
-			);
-		}
+			writeJSON(tasksPath, data);
+			if (outputFormat === 'text' && getDebugFlag(session)) {
+				console.log('>>> DEBUG: writeJSON call completed.');
+			}
 
-		if (outputFormat === 'text' && aiServiceResponse.telemetryData) {
-			displayAiUsageSummary(aiServiceResponse.telemetryData, 'cli');
-		}
+			report('success', `Successfully updated subtask ${subtaskId}`);
+			// await generateTaskFiles(tasksPath, path.dirname(tasksPath));
 
-		return {
-			updatedSubtask: updatedSubtask,
-			telemetryData: aiServiceResponse.telemetryData
-		};
+			if (outputFormat === 'text') {
+				if (loadingIndicator) {
+					stopLoadingIndicator(loadingIndicator);
+					loadingIndicator = null;
+				}
+				console.log(
+					boxen(
+						chalk.green(`Successfully updated subtask #${subtaskId}`) +
+							'\n\n' +
+							chalk.white.bold('Title:') +
+							' ' +
+							updatedSubtask.title +
+							'\n\n' +
+							chalk.white.bold('Newly Added Snippet:') +
+							'\n' +
+							chalk.white(newlyAddedSnippet),
+						{ padding: 1, borderColor: 'green', borderStyle: 'round' }
+					)
+				);
+			}
+
+			if (outputFormat === 'text' && aiServiceResponse.telemetryData) {
+				displayAiUsageSummary(aiServiceResponse.telemetryData, 'cli');
+			}
+
+			return {
+				updatedSubtask: updatedSubtask,
+				telemetryData: aiServiceResponse.telemetryData
+			};
+		}
 	} catch (error) {
 		if (outputFormat === 'text' && loadingIndicator) {
 			stopLoadingIndicator(loadingIndicator);
@@ -508,5 +515,82 @@ async function updateSubtaskMetadataFieldValueById(tasksPath, subtaskId, fieldKe
 	return parentTask.subtasks[subtaskIndex];
 }
 
+/**
+ * Delete a subtask's metadata field by ID
+ * @param {string} tasksPath - Path to the tasks.json file
+ * @param {string} subtaskId - ID of the subtask to update in format "parentId.subtaskId"
+ * @param {string} fieldKey - Metadata field key to delete
+ * @returns {Promise<Object>} - Updated subtask data
+ */
+async function deleteSubtaskMetadataFieldById(tasksPath, subtaskId, fieldKey) {
+	if (!fieldKey || typeof fieldKey !== 'string') {
+		throw new Error('Metadata field key must be a non-empty string');
+	}
+
+	const { data, parentTask, subtaskIndex } = validateAndFindSubtask(tasksPath, subtaskId);
+
+	if (!parentTask.subtasks[subtaskIndex].metadata || !parentTask.subtasks[subtaskIndex].metadata.fields) {
+		throw new Error(`Subtask ${subtaskId} has no metadata fields`);
+	}
+
+	const fieldIndex = parentTask.subtasks[subtaskIndex].metadata.fields.findIndex(field => field.key === fieldKey);
+	if (fieldIndex === -1) {
+		throw new Error(`Subtask ${subtaskId} has no metadata field ${fieldKey}`);
+	}
+
+	// Remove the field from the array
+	parentTask.subtasks[subtaskIndex].metadata.fields.splice(fieldIndex, 1);
+
+	writeJSON(tasksPath, data);
+
+	return parentTask.subtasks[subtaskIndex];
+}
+
+/**
+ * Add a new metadata field to a subtask by ID
+ * @param {string} tasksPath - Path to the tasks.json file
+ * @param {string} subtaskId - ID of the subtask to update in format "parentId.subtaskId"
+ * @param {string} fieldKey - Metadata field key to add
+ * @param {any} fieldValue - Value for the new metadata field
+ * @param {string} fieldType - Type of the metadata field (default: 'text')
+ * @returns {Promise<Object>} - Updated subtask data
+ */
+async function addSubtaskMetadataFieldById(tasksPath, subtaskId, fieldKey, fieldValue, fieldType = 'text') {
+	if (!fieldKey || typeof fieldKey !== 'string') {
+		throw new Error('Metadata field key must be a non-empty string');
+	}
+
+	const { data, parentTask, subtaskIndex } = validateAndFindSubtask(tasksPath, subtaskId);
+
+	// Initialize metadata if it doesn't exist
+	if (!parentTask.subtasks[subtaskIndex].metadata) {
+		parentTask.subtasks[subtaskIndex].metadata = {};
+	}
+
+	// Initialize fields array if it doesn't exist
+	if (!parentTask.subtasks[subtaskIndex].metadata.fields) {
+		parentTask.subtasks[subtaskIndex].metadata.fields = [];
+	}
+
+	// Check if field key already exists
+	const existingField = parentTask.subtasks[subtaskIndex].metadata.fields.find(field => field.key === fieldKey);
+	if (existingField) {
+		throw new Error(`Subtask ${subtaskId} already has a metadata field with key '${fieldKey}'`);
+	}
+
+	// Add the new field
+	const newField = {
+		key: fieldKey,
+		value: fieldValue,
+		type: fieldType
+	};
+
+	parentTask.subtasks[subtaskIndex].metadata.fields.push(newField);
+
+	writeJSON(tasksPath, data);
+
+	return parentTask.subtasks[subtaskIndex];
+}
+
 export default updateSubtaskById;
-export { updateSubtaskNormalAttributeById, updateSubtaskNormalAttributesById, updateSubtaskMetadataFieldValueById };
+export { updateSubtaskNormalAttributeById, updateSubtaskNormalAttributesById, updateSubtaskMetadataFieldValueById, deleteSubtaskMetadataFieldById, addSubtaskMetadataFieldById };

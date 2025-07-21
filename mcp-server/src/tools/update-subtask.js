@@ -38,11 +38,7 @@ export function registerUpdateSubtaskTool(server) {
 				.string()
 				.describe('The directory of the project. Must be an absolute path.'),
 			verifications: z.array(verificationSchema).optional().describe('Verifications to update'),
-			metadata: z.array(metadataSchema).optional().describe('Metadata to update'),
-			results: z
-				.string()
-				.optional()
-				.describe('Results or outcomes of the task execution'),
+			metadata: z.array(metadataSchema).optional().describe('Metadata to update')
 		}),
 		execute: withNormalizedProjectRoot(async (args, { log, session }) => {
 			const toolName = 'update_subtask';
@@ -62,13 +58,43 @@ export function registerUpdateSubtaskTool(server) {
 					);
 				}
 
+				const directAttributes = {};
+				if (args.title) {
+					directAttributes.title = args.title;
+				}
+				if (args.description) {
+					directAttributes.description = args.description;
+				}
+				if (args.details) {
+					directAttributes.details = args.details;
+				}
+				if (args.testStrategy) {
+					directAttributes.testStrategy = args.testStrategy;
+				}
+				if (args.dependencies) {
+					directAttributes.dependencies = args.dependencies;
+				}
+				if (args.assignees) {
+					directAttributes.assignees = args.assignees;
+				}
+				if (args.executor) {
+					directAttributes.executor = args.executor;
+				}
+				if (args.verifications) {
+					directAttributes.verifications = args.verifications;
+				}
+				if (args.metadata) {
+					directAttributes.metadata = args.metadata;
+				}
+
 				const result = await updateSubtaskByIdDirect(
 					{
 						tasksJsonPath: tasksJsonPath,
 						id: args.id,
 						prompt: args.prompt,
 						research: args.research,
-						projectRoot: args.projectRoot
+						projectRoot: args.projectRoot,
+						directAttributes
 					},
 					log,
 					{ session }

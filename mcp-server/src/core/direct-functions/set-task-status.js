@@ -78,6 +78,7 @@ export async function setTaskStatusDirect(args, log) {
 					message: `Successfully updated task ${taskId} status to "${newStatus}"`,
 					taskId,
 					status: newStatus,
+					executor,
 					tasksPath: tasksPath // Return the path used
 				}
 			};

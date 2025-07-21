@@ -73,18 +73,18 @@ export function registerSetTaskStatusTool(server) {
 					);
 				}
 
-				let complexityReportPath;
-				try {
-					complexityReportPath = findComplexityReportPath(
-						{
-							projectRoot: args.projectRoot,
-							complexityReport: args.complexityReport
-						},
-						log
-					);
-				} catch (error) {
-					log.error(`Error finding complexity report: ${error.message}`);
-				}
+				// let complexityReportPath;
+				// try {
+				// 	complexityReportPath = findComplexityReportPath(
+				// 		{
+				// 			projectRoot: args.projectRoot,
+				// 			complexityReport: args.complexityReport
+				// 		},
+				// 		log
+				// 	);
+				// } catch (error) {
+				// 	log.error(`Error finding complexity report: ${error.message}`);
+				// }
 
 				const result = await setTaskStatusDirect(
 					{
@@ -99,7 +99,7 @@ export function registerSetTaskStatusTool(server) {
 
 				if (result.success) {
 					log.info(
-						`Successfully updated status for task(s) ${args.id} to "${args.status}": ${result.data.message}`
+						`Successfully updated status for task(s) ${args.id} to "${args.status}", "executor": ${args.executor}, "complexityReportPath": ${complexityReportPath}: ${result.data.message}`
 					);
 				} else {
 					log.error(

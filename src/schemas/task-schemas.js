@@ -90,8 +90,6 @@ export const subtaskSchema = z
             .array(verificationSchema)
             .optional()
             .describe('Array of verification steps to check if the subtask is completed correctly'),
-        results: resultsSchema
-            .optional(),
         metadata: metadataSchema
             .optional()
             .describe('Metadata for subtask configuration and relationships')
@@ -167,11 +165,16 @@ export const aiTaskDataSchema = z.object({
         .array(verificationSchema)
         .optional()
         .describe('Array of verification steps to check if the task is completed correctly'),
-    results: resultsSchema
-        .optional(),
     metadata: metadataSchema
         .optional()
         .describe('Metadata for task configuration and relationships')
+});
+export const aiUpdateTaskDataSchema = aiTaskDataSchema.extend({
+    id: z.number().int().describe('ID of the task to update'),
+    subtasks: subtaskArraySchema
+        .optional()
+        .describe('Array of subtasks for this task')
+
 });
 
 // Updated task schema for task updates (more flexible)

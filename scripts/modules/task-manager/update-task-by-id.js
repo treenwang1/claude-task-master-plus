@@ -247,10 +247,105 @@ async function updateTaskMetadataFieldValueById(tasksPath, taskId, fieldKey, fie
 		const field = tasksToUpdate.metadata.fields.find(field => field.key === fieldKey);
 		if (field) {
 			field.value = fieldValue;
+			writeJSON(tasksPath, data);
+			return tasksToUpdate;
+		} else {
+			throw new Error(`Task ${taskId} has no metadata field ${fieldKey}`);
 		}
-		writeJSON(tasksPath, data);
+	} else {
+		throw new Error(`Task ${taskId} has no metadata field`);
+	}
+}
+
+/**
+ * Delete a task's metadata field by ID
+ * @param {string} tasksPath - Path to the tasks.json file
+ * @param {number} taskId - Task ID to update
+ * @param {string} fieldKey - Metadata field key to delete
+ * @returns {Promise<Object>} - Updated task data
+ */
+async function deleteTaskMetadataFieldById(tasksPath, taskId, fieldKey) {
+	if (!fieldKey || typeof fieldKey !== 'string') {
+		throw new Error('Metadata field key must be a non-empty string');
 	}
 
+	const data = readJSON(tasksPath);
+	const tasksToUpdate = data.tasks.find(
+		(task) => task.id === taskId
+	);
+
+	if (!tasksToUpdate) {
+		throw new Error(`Task with ID ${taskId} not found`);
+	}
+
+	if (!tasksToUpdate.metadata || !tasksToUpdate.metadata.fields) {
+		throw new Error(`Task ${taskId} has no metadata fields`);
+	}
+
+	const fieldIndex = tasksToUpdate.metadata.fields.findIndex(field => field.key === fieldKey);
+	if (fieldIndex === -1) {
+		throw new Error(`Task ${taskId} has no metadata field ${fieldKey}`);
+	}
+
+	// Remove the field from the array
+	tasksToUpdate.metadata.fields.splice(fieldIndex, 1);
+
+	writeJSON(tasksPath, data);
+	return tasksToUpdate;
+}
+
+/**
+ * Add a new metadata field to a task by ID
+ * @param {string} tasksPath - Path to the tasks.json file
+ * @param {number} taskId - Task ID to update
+ * @param {Object} fieldData - Metadata field data (key, label, type, description, required, enum, value)
+ * @returns {Promise<Object>} - Updated task data
+ */
+async function addTaskMetadataFieldById(tasksPath, taskId, fieldData) {
+	if (!fieldData || !fieldData.key || typeof fieldData.key !== 'string') {
+		throw new Error('Metadata field data must include a valid key');
+	}
+
+	const data = readJSON(tasksPath);
+	const tasksToUpdate = data.tasks.find(
+		(task) => task.id === taskId
+	);
+
+	if (!tasksToUpdate) {
+		throw new Error(`Task with ID ${taskId} not found`);
+	}
+
+	// Initialize metadata and fields if they don't exist
+	if (!tasksToUpdate.metadata) {
+		tasksToUpdate.metadata = {};
+	}
+	if (!tasksToUpdate.metadata.fields) {
+		tasksToUpdate.metadata.fields = [];
+	}
+
+	// Check if field with same key already exists
+	const existingFieldIndex = tasksToUpdate.metadata.fields.findIndex(
+		field => field.key === fieldData.key
+	);
+	if (existingFieldIndex !== -1) {
+		throw new Error(`Metadata field with key '${fieldData.key}' already exists`);
+	}
+
+	// Create the new field with default values
+	const newField = {
+		key: fieldData.key,
+		label: fieldData.label || fieldData.key,
+		type: fieldData.type || 'text',
+		description: fieldData.description || '',
+		required: fieldData.required || false,
+		...(fieldData.enum && { enum: fieldData.enum }),
+		...(fieldData.value && { value: fieldData.value })
+	};
+
+	// Add the new field
+	tasksToUpdate.metadata.fields.push(newField);
+
+	writeJSON(tasksPath, data);
 	return tasksToUpdate;
 }
 
@@ -539,4 +634,4 @@ The changes described in the prompt should be thoughtfully applied to make the t
 }
 
 export default updateTaskById;
-export { updateTaskNormalAttributeById, updateTaskNormalAttributesById, updateTaskMetadataFieldValueById };
+export { updateTaskNormalAttributeById, updateTaskNormalAttributesById, updateTaskMetadataFieldValueById, deleteTaskMetadataFieldById, addTaskMetadataFieldById };

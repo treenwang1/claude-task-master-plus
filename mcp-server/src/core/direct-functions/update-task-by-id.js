@@ -27,7 +27,7 @@ import { createLogWrapper } from '../../tools/utils.js';
 export async function updateTaskByIdDirect(args, log, context = {}) {
 	const { session } = context;
 	// Destructure expected args, including projectRoot
-	const { tasksJsonPath, id, prompt, research, projectRoot } = args;
+	const { tasksJsonPath, id, prompt, research, projectRoot, directAttributes } = args;
 
 	const logWrapper = createLogWrapper(log);
 
@@ -57,15 +57,15 @@ export async function updateTaskByIdDirect(args, log, context = {}) {
 			};
 		}
 
-		if (!prompt) {
-			const errorMessage =
-				'No prompt specified. Please provide a prompt with new information for the task update.';
-			logWrapper.error(errorMessage);
-			return {
-				success: false,
-				error: { code: 'MISSING_PROMPT', message: errorMessage }
-			};
-		}
+		// if (!prompt) {
+		// 	const errorMessage =
+		// 		'No prompt specified. Please provide a prompt with new information for the task update.';
+		// 	logWrapper.error(errorMessage);
+		// 	return {
+		// 		success: false,
+		// 		error: { code: 'MISSING_PROMPT', message: errorMessage }
+		// 	};
+		// }
 
 		// Parse taskId - handle both string and number values
 		let taskId;
@@ -118,7 +118,8 @@ export async function updateTaskByIdDirect(args, log, context = {}) {
 					commandName: 'update-task',
 					outputType: 'mcp'
 				},
-				'json'
+				'json',
+				directAttributes
 			);
 
 			// Check if the core function returned null or an object without success

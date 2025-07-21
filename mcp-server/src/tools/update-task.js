@@ -11,7 +11,7 @@ import {
 } from './utils.js';
 import { updateTaskByIdDirect } from '../core/task-master-core.js';
 import { findTasksPath } from '../core/utils/path-utils.js';
-import { metadataSchema, subtaskSchema, verificationSchema } from '../../../src/schemas/task-schemas.js';
+import { aiTaskDataSchema, aiUpdateTaskDataSchema, metadataSchema, subtaskSchema, updatedTaskSchema, verificationSchema } from '../../../src/schemas/task-schemas.js';
 
 /**
  * Register the update-task tool with the MCP server
@@ -22,12 +22,12 @@ export function registerUpdateTaskTool(server) {
 		name: 'update_task',
 		description:
 			'Updates a single task by ID with new information or context provided in the prompt.',
-		parameters: z.object({
-			id: z
-				.number().int() // ID can be number or string like "1"
-				.describe(
-					"ID of the task (e.g. '15') to update. Subtasks are supported using the update-subtask tool."
-				),
+		parameters: aiUpdateTaskDataSchema.extend({
+			// id: z
+			// 	.number().int() // ID can be number or string like "1"
+			// 	.describe(
+			// 		"ID of the task (e.g. '15') to update. Subtasks are supported using the update-subtask tool."
+			// 	),
 			// prompt: z
 			// 	.string()
 			// 	.describe('New information or context to incorporate into the task'),
@@ -38,14 +38,7 @@ export function registerUpdateTaskTool(server) {
 			file: z.string().optional().describe('Absolute path to the tasks file'),
 			projectRoot: z
 				.string()
-				.describe('The directory of the project. Must be an absolute path.'),
-			subtasks: z.array(subtaskSchema).optional().describe('Subtasks to update'),
-			verifications: z.array(verificationSchema).optional().describe('Verifications to update'),
-			metadata: z.array(metadataSchema).optional().describe('Metadata to update'),
-			results: z
-				.string()
-				.optional()
-				.describe('Results or outcomes of the task execution'),
+				.describe('The directory of the project. Must be an absolute path.')
 		}),
 		execute: withNormalizedProjectRoot(async (args, { log, session }) => {
 			const toolName = 'update_task';
@@ -68,6 +61,38 @@ export function registerUpdateTaskTool(server) {
 					);
 				}
 
+				const directAttributes = {};
+				if (args.title) {
+					directAttributes.title = args.title;
+				}
+				if (args.description) {
+					directAttributes.description = args.description;
+				}
+				if (args.details) {
+					directAttributes.details = args.details;
+				}
+				if (args.testStrategy) {
+					directAttributes.testStrategy = args.testStrategy;
+				}
+				if (args.dependencies) {
+					directAttributes.dependencies = args.dependencies;
+				}
+				if (args.assignees) {
+					directAttributes.assignees = args.assignees;
+				}
+				if (args.executor) {
+					directAttributes.executor = args.executor;
+				}
+				if (args.subtasks) {
+					directAttributes.subtasks = args.subtasks;
+				}
+				if (args.verifications) {
+					directAttributes.verifications = args.verifications;
+				}
+				if (args.metadata) {
+					directAttributes.metadata = args.metadata;
+				}
+
 				// 3. Call Direct Function - Include projectRoot
 				const result = await updateTaskByIdDirect(
 					{
@@ -75,7 +100,8 @@ export function registerUpdateTaskTool(server) {
 						id: args.id,
 						prompt: args.prompt,
 						research: args.research,
-						projectRoot: args.projectRoot
+						projectRoot: args.projectRoot,
+						directAttributes
 					},
 					log,
 					{ session }

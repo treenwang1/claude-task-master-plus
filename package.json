@@ -1,6 +1,6 @@
 {
   "name": "task-master-ai-plus",
-  "version": "0.0.84",
+  "version": "0.0.94",
   "description": "A task management system for ambitious AI-driven development that doesn't overwhelm and confuse Cursor.",
   "main": "index.js",
   "type": "module",
